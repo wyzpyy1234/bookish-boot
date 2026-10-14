@@ -8,4 +8,10 @@ public interface UserService {
     User login(LoginUserDto loginUserDto);
 
     User getUserByPassword(String password);
+    User getById(Integer id);
+
+    void updateAvatar(Integer id, String avatarUrl);
+
+    /** 改密码：内部会校验原密码，不对就抛业务异常 */
+    void changePassword(Integer id, String oldPassword, String newPassword);
 }

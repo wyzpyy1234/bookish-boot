@@ -823,6 +823,83 @@ mark.hl {
   .search-status { min-width: 0; }
 }
 
+/* ============ 头像：支持真实图片 ============ */
+.avatar.has-img { background: var(--bg); overflow: hidden; }
+.avatar.has-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ============ 个人中心弹窗 ============ */
+.pf-modal { width: min(520px, 100%); }
+
+.pf-tabs {
+  display: flex; gap: 4px; padding: 10px 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pf-tabs button {
+  padding: 8px 14px; border: none; background: none; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; color: var(--text-sub); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+
+.pf-tabs button:hover { color: var(--primary); }
+.pf-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+
+.pf-avatar-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+
+.pf-avatar {
+  width: 84px; height: 84px; border-radius: 50%; padding: 0; flex-shrink: 0;
+  border: 1px solid var(--border); background: var(--bg); overflow: hidden;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 600; color: #fff;
+  transition: border-color .15s, transform .15s;
+}
+
+.pf-avatar:hover { border-color: var(--primary); transform: scale(1.03); }
+.pf-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-avatar > span { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+.pf-avatar-side { min-width: 0; }
+.pf-avatar-title { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
+.pf-avatar-hint { font-size: 12px; color: var(--text-light); margin-bottom: 10px; }
+.pf-avatar-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn-sm { padding: 6px 13px; font-size: 12.5px; }
+
+.pf-drop {
+  border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  padding: 16px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.pf-drop b { display: block; font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.pf-drop span { font-size: 12px; color: var(--text-light); }
+.pf-drop:hover, .pf-drop.over { border-color: var(--primary); background: var(--primary-light); }
+
+.pf-progress {
+  height: 6px; border-radius: 999px; background: var(--bg);
+  overflow: hidden; margin-top: 12px;
+}
+
+.pf-progress-bar {
+  height: 100%; width: 0; background: var(--primary);
+  border-radius: 999px; transition: width .18s ease;
+}
+
+.pf-info { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 6px; }
+
+.pf-info-row {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
+}
+
+.pf-info-row:last-child { border-bottom: none; }
+.pf-info-k { color: var(--text-sub); flex-shrink: 0; }
+.pf-info-v { text-align: right; word-break: break-all; }
+
+.pf-tip {
+  background: var(--warning-light); border-radius: var(--radius-sm);
+  padding: 10px 13px; font-size: 12.5px; color: var(--warning); margin-bottom: 16px;
+}
+
 /* ============ 响应式 ============ */
 @media (max-width: 1100px) {
   .hot-carousel { --hot-visible: 4; }

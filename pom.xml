@@ -52,7 +52,7 @@
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>2.3.2</version>
         </dependency>
-
+        <!-- mybatis、druid、lombok、mysql、fastjson2 都要保留version -->
         <!-- druid 适配2.7.x -->
         <dependency>
             <groupId>com.alibaba</groupId>

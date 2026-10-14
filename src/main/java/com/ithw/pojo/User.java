@@ -15,6 +15,7 @@ public class User {
     private String password;
     private String nickname;
     private String phone;
+    private String avatar;
     private String role;
     private Integer maxBorrow;
     private LocalDateTime createTime;

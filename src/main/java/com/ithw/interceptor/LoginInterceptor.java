@@ -1,12 +1,10 @@
 package com.ithw.interceptor;
-
 import com.alibaba.fastjson2.JSON;
 import com.ithw.pojo.Result;
 import com.ithw.pojo.ResultCode;
 import com.ithw.pojo.TokenUtils;
 import com.ithw.pojo.User;
 import org.springframework.web.servlet.HandlerInterceptor;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 

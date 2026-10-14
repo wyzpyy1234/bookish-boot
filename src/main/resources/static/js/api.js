@@ -128,6 +128,73 @@ function request(method, path, body, opts) {
   });
 }
 
+/* ==================== 3.5 文件上传 ====================
+ * ★ 为什么单独写一个，不复用上面的 request()？
+ *   1) 上传要发 multipart/form-data，不能设 Content-Type
+ *      （必须让浏览器自己带 boundary，写死了后端就解析不出来）
+ *   2) fetch 拿不到「上传进度」，只有 XMLHttpRequest 的 upload.onprogress 能拿到
+ *      —— 大文件没进度条体验很差，所以这里用 XHR。
+ * ===================================================== */
+
+/**
+ * @param path     接口路径，如 "/api/user/avatar"
+ * @param file     File 对象（来自 <input type="file"> 或拖拽的 dataTransfer.files）
+ * @param onProgress 可选，(percent) => void，0~100
+ * @param fields   可选，额外的表单字段
+ */
+function upload(path, file, onProgress, fields) {
+  return new Promise(function (resolve, reject) {
+    if (USE_MOCK) return mockUpload(path, file, onProgress).then(resolve, reject);
+
+    const fd = new FormData();
+    fd.append("file", file);
+    if (fields) Object.keys(fields).forEach(function (k) { fd.append(k, fields[k]); });
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", BASE + path);
+
+    const token = getToken();
+    if (token) xhr.setRequestHeader("Authorization", token);
+    /* ⚠️ 绝对不要 setRequestHeader("Content-Type", ...) —— 让浏览器自动加 boundary */
+
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+
+    xhr.onload = function () {
+      let json = null;
+      try { json = JSON.parse(xhr.responseText); } catch (e) { /* 下面统一处理 */ }
+      if (!json) {
+        return reject(new Error("服务器返回了非 JSON 内容（HTTP " + xhr.status + "），请检查后端日志"));
+      }
+      if (json.code === 401) {
+        clearLogin();
+        showToast("登录已失效，请重新登录", "warn");
+        setTimeout(function () { location.href = "login.html"; }, 800);
+        return reject(new Error(json.message || "未登录"));
+      }
+      if (json.code !== 200) return reject(new Error(json.message || ("上传失败 (" + json.code + ")")));
+      resolve(json.data);
+    };
+    xhr.onerror = function () { reject(new Error("网络错误，上传失败")); };
+    xhr.onabort = function () { reject(new Error("上传已取消")); };
+
+    xhr.send(fd);
+  });
+}
+
+/* 校验待上传的图片（前端先挡一道，别等传上去被后端拒） */
+function checkImageFile(file) {
+  if (!file) return "没有拿到文件";
+  if (!/^image\//.test(file.type)) return "只能上传图片（当前类型：" + (file.type || "未知") + "）";
+  if (file.size > 2 * 1024 * 1024) {
+    return "图片不能超过 2MB（当前 " + (file.size / 1024 / 1024).toFixed(2) + "MB）";
+  }
+  return null;
+}
+
 /* ==================== 4. 工具函数 ==================== */
 
 function money(n) {
@@ -171,6 +238,33 @@ function avatarColor(u) {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
 
+/* 头像 HTML：用户传过图就渲染真实图片，没传过就回落到「首字 + 取色」方块。
+ * ★ 所有需要显示头像的地方都调它，不要自己拼 <img>，否则回落逻辑会漏。 */
+function avatarHTML(u, cls) {
+  const klass = cls || "avatar";
+  const url = u && u.avatar;
+  if (url) {
+    return '<span class="' + klass + ' has-img"><img src="' + escapeHtml(url) + '" alt="头像" ' +
+           'onerror="this.parentNode.classList.remove(\'has-img\');this.parentNode.removeChild(this);' +
+           'this.parentNode.textContent=\'' + escapeHtml(avatarText(u)) + '\'"></span>';
+  }
+  return '<span class="' + klass + '" style="background:' + avatarColor(u) + '">' +
+         escapeHtml(avatarText(u)) + "</span>";
+}
+
+/* 把服务端返回的最新用户字段合并进本地登录态（头像改了要立刻生效，不能等重新登录） */
+function updateMyUser(patch) {
+  const me = getUser();
+  if (!me) return null;
+  const next = Object.assign({}, me, patch || {});
+  const uk = USER_PREFIX + me.role;
+  try { localStorage.setItem(uk, JSON.stringify(next)); } catch (e) { /* 存不下就算了（比如 mock 模式下的 base64 大图） */ }
+  ssSet(uk, JSON.stringify(next));
+  /* 导航栏头像要跟着变，否则用户改完了以为没生效 */
+  if (document.getElementById("userBox")) renderUserChip("userBox", next);
+  return next;
+}
+
 /* Toast 提示 */
 function showToast(msg, type) {
   let box = document.getElementById("toastBox");
@@ -197,7 +291,7 @@ function renderUserChip(containerId, me) {
   const roleText = me.role === "admin" ? "管理员" : "读者";
   box.innerHTML =
     '<div class="user-chip" onclick="toggleUserMenu(event)">' +
-      '<span class="avatar" style="background:' + avatarColor(me) + '">' + escapeHtml(avatarText(me)) + "</span>" +
+      avatarHTML(me) +
       '<span class="uname">' + escapeHtml(me.nickname) + "</span>" +
       '<span class="urole">' + roleText + "</span>" +
     "</div>" +
@@ -205,8 +299,11 @@ function renderUserChip(containerId, me) {
       '<div style="padding:9px 12px;font-size:12.5px;color:var(--text-sub);border-bottom:1px solid var(--border);margin-bottom:4px">' +
         "ID " + me.id + " · @" + escapeHtml(me.username) +
       "</div>" +
+      '<button onclick="openProfile(\'info\')">基本资料与头像</button>' +
+      '<button onclick="openProfile(\'pwd\')">修改密码</button>' +
       '<button onclick="doLogout()">退出登录</button>' +
     "</div>";
+  ensureProfileModal();
 }
 
 function toggleUserMenu(e) {
@@ -219,6 +316,227 @@ document.addEventListener("click", function () {
   const m = document.getElementById("userMenu");
   if (m) m.classList.remove("show");
 });
+
+/* ==================== 个人中心（资料 / 头像上传 / 改密码） ====================
+ * 弹窗 DOM 由这里动态注入到 body —— 好处是 4 个页面只改 api.js 一处就都有，
+ * 以后新增页面也自动继承，不用每个 html 里复制粘贴一份。
+ * ========================================================================= */
+
+function ensureProfileModal() {
+  if (document.getElementById("profileModal")) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "modal-mask";
+  wrap.id = "profileModal";
+  wrap.setAttribute("onclick", "if(event.target===this)closeProfile()");
+  wrap.innerHTML =
+    '<div class="modal pf-modal">' +
+      '<div class="modal-head">' +
+        "<h3>个人中心</h3>" +
+        '<button class="modal-close" onclick="closeProfile()">×</button>' +
+      "</div>" +
+      '<div class="pf-tabs">' +
+        '<button class="active" data-tab="info" onclick="pfTab(\'info\')">基本资料</button>' +
+        '<button data-tab="pwd" onclick="pfTab(\'pwd\')">修改密码</button>' +
+      "</div>" +
+      '<div class="modal-body">' +
+
+        '<div id="pfPaneInfo">' +
+          '<div class="pf-avatar-row">' +
+            '<button type="button" class="pf-avatar" id="pfAvatar" title="点击更换头像" onclick="pfPickAvatar()"></button>' +
+            '<div class="pf-avatar-side">' +
+              '<div class="pf-avatar-title">点击左侧头像即可更换</div>' +
+              '<div class="pf-avatar-hint">支持 JPG / PNG / GIF / WebP，不超过 2MB</div>' +
+              '<div class="pf-avatar-btns">' +
+                '<button class="btn btn-primary btn-sm" onclick="pfPickAvatar()">选择图片</button>' +
+                '<button class="btn btn-ghost btn-sm" id="pfResetAvatar" onclick="pfRemoveAvatar()">恢复默认</button>' +
+              "</div>" +
+            "</div>" +
+          "</div>" +
+
+          '<div class="pf-drop" id="pfDrop" onclick="pfPickAvatar()">' +
+            "<b>把图片拖到这里</b><span>或点击此处选择文件</span>" +
+          "</div>" +
+          '<input type="file" id="pfFile" accept="image/*" style="display:none" onchange="pfFileChosen(this)">' +
+
+          '<div class="pf-progress" id="pfProgress" style="display:none">' +
+            '<div class="pf-progress-bar" id="pfProgressBar"></div>' +
+          "</div>" +
+
+          '<div class="pf-info" id="pfInfo"></div>' +
+        "</div>" +
+
+        '<div id="pfPanePwd" style="display:none">' +
+          '<div class="pf-tip">修改密码需要先验证原密码，改完会自动退出重新登录。</div>' +
+          '<form onsubmit="pfChangePassword(event)">' +
+            '<div class="field"><label>原密码</label>' +
+              '<input type="password" id="pfOldPwd" autocomplete="current-password" required></div>' +
+            '<div class="field"><label>新密码</label>' +
+              '<input type="password" id="pfNewPwd" placeholder="至少 6 位" autocomplete="new-password" required></div>' +
+            '<div class="field"><label>确认新密码</label>' +
+              '<input type="password" id="pfNewPwd2" autocomplete="new-password" required></div>' +
+            '<button type="submit" class="btn btn-primary" style="width:100%;padding:11px" id="pfPwdBtn">确认修改</button>' +
+          "</form>" +
+        "</div>" +
+
+      "</div>" +
+    "</div>";
+  document.body.appendChild(wrap);
+
+  /* 拖拽上传：dragover 必须 preventDefault，否则浏览器会直接打开这张图 */
+  const drop = wrap.querySelector("#pfDrop");
+  if (drop) {
+    ["dragenter", "dragover"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); });
+    });
+    drop.addEventListener("drop", function (e) {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) pfUpload(f);
+    });
+  }
+}
+
+function openProfile(tab) {
+  ensureProfileModal();
+  pfTab(tab || "info");
+  pfFillInfo(getUser());
+  openModal("profileModal");
+  /* 顺手拉一次服务端最新资料（头像/昵称可能在别处改过）。
+     后端还没实现时静默失败，不影响本地缓存展示。 */
+  request("GET", "/api/user/profile").then(function (u) {
+    if (u) { updateMyUser(u); pfFillInfo(u); }
+  }).catch(function () {});
+}
+
+function closeProfile() { closeModal("profileModal"); }
+
+function pfTab(tab) {
+  const m = document.getElementById("profileModal");
+  if (!m) return;
+  const tabs = m.querySelectorAll(".pf-tabs button");
+  for (let i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle("active", tabs[i].getAttribute("data-tab") === tab);
+  }
+  m.querySelector("#pfPaneInfo").style.display = tab === "info" ? "" : "none";
+  m.querySelector("#pfPanePwd").style.display = tab === "pwd" ? "" : "none";
+}
+
+function pfFillInfo(u) {
+  u = u || {};
+  const av = document.getElementById("pfAvatar");
+  if (av) {
+    av.innerHTML = u.avatar
+      ? '<img src="' + escapeHtml(u.avatar) + '" alt="头像">'
+      : '<span style="background:' + avatarColor(u) + '">' + escapeHtml(avatarText(u)) + "</span>";
+  }
+  const box = document.getElementById("pfInfo");
+  if (box) {
+    const rows = [
+      ["用户 ID", u.id],
+      ["登录账号", u.username],
+      ["昵称", u.nickname],
+      ["手机号", u.phone || "未填写"],
+      ["角色", u.role === "admin" ? "管理员" : (u.role === "reader" ? "读者" : "—")],
+      ["可借上限", u.maxBorrow != null ? u.maxBorrow + " 本" : "—"],
+      ["注册时间", u.createTime ? fmtTime(u.createTime) : "—"]
+    ];
+    box.innerHTML = rows.map(function (r) {
+      return '<div class="pf-info-row"><span class="pf-info-k">' + r[0] + "</span>" +
+             '<span class="pf-info-v">' + escapeHtml(r[1] == null ? "—" : r[1]) + "</span></div>";
+    }).join("");
+  }
+  const reset = document.getElementById("pfResetAvatar");
+  if (reset) reset.style.display = u.avatar ? "" : "none";
+}
+
+/* ---------- 换头像 ---------- */
+
+function pfPickAvatar() {
+  const input = document.getElementById("pfFile");
+  if (input) { input.value = ""; input.click(); }   // 清空 value，同一张图重选也能触发 change
+}
+
+function pfFileChosen(input) {
+  const f = input.files && input.files[0];
+  if (f) pfUpload(f);
+}
+
+function pfUpload(file) {
+  const bad = checkImageFile(file);
+  if (bad) { showToast(bad, "err"); return; }
+
+  const prog = document.getElementById("pfProgress");
+  const bar = document.getElementById("pfProgressBar");
+  const drop = document.getElementById("pfDrop");
+  if (prog) prog.style.display = "";
+  if (bar) bar.style.width = "0%";
+  if (drop) drop.style.display = "none";
+
+  /* 先本地预览（读成 base64 直接显示）：用户感觉「瞬间就换好了」，
+     等真正上传完再替换成服务端返回的 URL。失败则回滚成原头像。 */
+  const reader = new FileReader();
+  reader.onload = function () {
+    pfFillInfo(Object.assign({}, getUser(), { avatar: reader.result }));
+  };
+  reader.readAsDataURL(file);
+
+  upload("/api/user/avatar", file, function (p) {
+    if (bar) bar.style.width = p + "%";
+  }).then(function (data) {
+    const url = (data && data.avatar) || null;
+    const next = updateMyUser({ avatar: url });
+    pfFillInfo(next || getUser());
+    showToast("头像已更新", "ok");
+  }).catch(function (e) {
+    pfFillInfo(getUser());            // 回滚预览
+    showToast(e.message, "err");
+  }).then(function () {
+    if (prog) prog.style.display = "none";
+    if (drop) drop.style.display = "";
+  });
+}
+
+function pfRemoveAvatar() {
+  const me = getUser();
+  if (!me || !me.avatar) return;
+  request("DELETE", "/api/user/avatar").then(function () {
+    updateMyUser({ avatar: null });
+    pfFillInfo(getUser());
+    showToast("已恢复默认头像", "ok");
+  }).catch(function (e) { showToast(e.message, "err"); });
+}
+
+/* ---------- 改密码 ---------- */
+
+function pfChangePassword(e) {
+  e.preventDefault();
+  const oldP = document.getElementById("pfOldPwd").value;
+  const newP = document.getElementById("pfNewPwd").value;
+  const newP2 = document.getElementById("pfNewPwd2").value;
+
+  /* 前端先挡一道，省一次无效请求；真正的校验必须在后端做（前端可绕过） */
+  if (!oldP || !newP || !newP2) return showToast("请把三个密码框都填上", "warn");
+  if (newP.length < 6) return showToast("新密码至少 6 位", "warn");
+  if (newP !== newP2) return showToast("两次输入的新密码不一致", "warn");
+  if (newP === oldP) return showToast("新密码不能和原密码相同", "warn");
+
+  const btn = document.getElementById("pfPwdBtn");
+  btn.disabled = true;
+  btn.textContent = "提交中…";
+
+  request("PUT", "/api/user/password", { oldPassword: oldP, newPassword: newP })
+    .then(function () {
+      showToast("密码已修改，请重新登录", "ok");
+      setTimeout(function () { doLogout(); }, 1200);
+    })
+    .catch(function (err) { showToast(err.message, "err"); })
+    .then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = "确认修改"; }
+    });
+}
 
 /* 通用分页渲染
  * @param boxId  容器 id（同时作为回调的注册键，同一页面可以有多个分页器）
@@ -289,6 +607,48 @@ function closeModal(id) {
  *    导致真实接口缺失该逻辑时前端看不出问题。
  *    所以下面每个 mock 方法都严格按接口文档实现同样的逻辑。
  */
+
+/* ---------- Mock 专用：个人中心状态 ---------- */
+let MOCK_AVATAR = null;
+try { MOCK_AVATAR = localStorage.getItem("bk_mock_avatar") || null; } catch (e) {}
+let MOCK_PWD = "123456";
+
+function mockSetAvatar(v) {
+  MOCK_AVATAR = v;
+  try { v ? localStorage.setItem("bk_mock_avatar", v) : localStorage.removeItem("bk_mock_avatar"); } catch (e) {}
+}
+
+/* 当前登录用户在 mock 下的「最新」形态 */
+function mockMe() {
+  const me = getUser() || MOCK_USERS.reader;
+  return Object.assign({}, me, { avatar: MOCK_AVATAR, createTime: "2026-09-01 10:00:00" });
+}
+
+/* Mock 的上传：真上传是「文件 → 服务端 → 返回 URL」，
+   这里简化成「文件 → FileReader 读成 base64 → 当 URL 用」，
+   行为对齐（有进度、返回 { avatar }），前端代码一个字不用改。 */
+function mockUpload(path, file, onProgress) {
+  if (path !== "/api/user/avatar") return mockFail(404, "Mock 未实现的接口: " + path);
+  if (!file) return mockFail(1000, "没有拿到文件");
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onerror = function () { reject(new Error("读取文件失败")); };
+    reader.onload = function () {
+      const dataUrl = reader.result;
+      let p = 0;
+      const timer = setInterval(function () {
+        p = Math.min(100, p + 25);
+        if (onProgress) onProgress(p);
+        if (p >= 100) {
+          clearInterval(timer);
+          mockSetAvatar(dataUrl);
+          resolve({ avatar: dataUrl });
+        }
+      }, 80);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 const MOCK_CATEGORIES = [
   { id: 1, name: "计算机", sortNo: 1 },
@@ -395,6 +755,22 @@ function mockRequest(method, path, body) {
     return Promise.resolve(null);
   }
   if (q === "/api/logout") return Promise.resolve(null);
+
+  /* ---------- 个人中心 ---------- */
+  if (q === "/api/user/profile" && method === "GET") {
+    return Promise.resolve(mockMe());
+  }
+  if (q === "/api/user/avatar" && method === "DELETE") {
+    mockSetAvatar(null);
+    return Promise.resolve(null);
+  }
+  if (q === "/api/user/password" && method === "PUT") {
+    if (!body || !body.oldPassword) return mockFail(1000, "请填写原密码");
+    if (body.oldPassword !== MOCK_PWD) return mockFail(1002, "原密码不正确");
+    if (!body.newPassword || body.newPassword.length < 6) return mockFail(1000, "新密码至少 6 位");
+    MOCK_PWD = body.newPassword;
+    return Promise.resolve(null);
+  }
 
   /* ---------- 基础数据 ---------- */
   if (q === "/api/categories") return Promise.resolve(MOCK_CATEGORIES);
