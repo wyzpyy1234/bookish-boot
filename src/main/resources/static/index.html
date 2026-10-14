@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>图书检索 · Bookish</title>
-<link rel="stylesheet" href="css/style.css?v=20261008e">
+<link rel="stylesheet" href="css/style.css?v=20261014a">
 </head>
 <body>
 
@@ -66,7 +66,11 @@
   <div class="section-title"><span class="bar"></span>图书检索</div>
   <div class="filter-bar">
     <div class="search-row">
-      <input type="text" id="keyword" placeholder="搜索书名或作者，回车确认…" onkeydown="if(event.key==='Enter'){applyFilter()}">
+      <div class="kw-wrap">
+        <input type="text" id="keyword" placeholder="输入书名或作者，边打边搜（回车立即搜索）"
+               oninput="onKeywordInput()" onkeydown="onKeywordKey(event)" autocomplete="off">
+        <button type="button" class="kw-clear" id="kwClear" title="清空" onclick="clearKeyword()">×</button>
+      </div>
       <select id="sortSel" onchange="applyFilter()">
         <option value="newest">最新上架</option>
         <option value="hot">最多借阅</option>
@@ -74,6 +78,7 @@
         <option value="priceDesc">价格从高到低</option>
       </select>
       <button class="btn btn-primary" onclick="applyFilter()">搜索</button>
+      <span class="search-status" id="searchStatus"></span>
     </div>
     <div class="chips" id="categoryChips"></div>
     <div class="chips" style="margin-top:10px">
@@ -107,7 +112,7 @@
   </div>
 </div>
 
-<script src="js/api.js?v=20261010a"></script>
+<script src="js/api.js?v=20261014a"></script>
 <script>
   window.PAGE_ROLE = "reader";
 
@@ -126,15 +131,22 @@
 
   var currentBookId = null;   // 详情弹窗里当前的书
 
+  /* 即时检索用到的三个前端专用状态（和后端字段无关） */
+  var reqSeq = 0;         // 请求序号：只认最后发出的那次请求，防止旧结果覆盖新结果
+  var kwTimer = null;     // 输入防抖定时器
+  var composing = false;  // 中文输入法是否正在拼字
+
   function safeInit() {
     applyHotMode();
+    restoreFromUrl();             // ① URL 上的检索条件 → state（刷新/分享链接能还原结果）
     if (!me) return;
     renderUserChip("userBox", me);
+    syncControls();               // ② state → 输入框/下拉框（分类 chips 要等 ajax 回来再补选中态）
     loadSummary();
     loadHot();
     loadCategories();
     loadPublishers();
-    loadBooks(1);
+    loadBooks(state.page || 1);   // ③ 再按还原出的条件发第一次 ajax
   }
 
   /* ---------- 热门借阅 TOP10（轮换 / 平铺 两种视图） ---------- */
@@ -308,7 +320,17 @@
               + escapeHtml(c.name) + "</span>";
       });
       document.getElementById("categoryChips").innerHTML = html;
+      markActiveCategory();     // chips 是 ajax 回来才渲染的，选中态得在这里补
     } catch (e) { showToast(e.message, "err"); }
+  }
+
+  /* 按 state 给分类 chip 打选中态 */
+  function markActiveCategory() {
+    var chips = document.querySelectorAll("#categoryChips .chip");
+    for (var i = 0; i < chips.length; i++) {
+      var cid = chips[i].getAttribute("data-cid") || "";
+      chips[i].classList.toggle("active", cid === String(state.categoryId));
+    }
   }
 
   async function loadPublishers() {
@@ -321,7 +343,17 @@
         o.textContent = p.name;
         sel.appendChild(o);
       });
+      sel.value = state.publisherId || "";    // 还原 URL 里的出版社条件
     } catch (e) { /* 忽略 */ }
+  }
+
+  /* 把 state 回填到筛选控件（刷新页面 / 从 URL 还原时保持界面与地址栏一致） */
+  function syncControls() {
+    document.getElementById("keyword").value = state.keyword;
+    document.getElementById("kwClear").style.display = state.keyword ? "flex" : "none";
+    document.getElementById("sortSel").value = state.sort;
+    document.getElementById("pubSel").value = state.publisherId;
+    document.getElementById("chipAvailable").classList.toggle("active", state.onlyAvailable);
   }
 
   function pickCategory(el, cid) {
@@ -339,47 +371,157 @@
   }
 
   function resetFilter() {
+    clearTimeout(kwTimer);
     state.keyword = "";
     state.categoryId = "";
     state.publisherId = "";
     state.onlyAvailable = false;
     state.sort = "newest";
-    document.getElementById("keyword").value = "";
-    document.getElementById("sortSel").value = "newest";
-    document.getElementById("pubSel").value = "";
-    document.getElementById("chipAvailable").classList.remove("active");
+    syncControls();
     var chips = document.querySelectorAll("#categoryChips .chip");
     for (var i = 0; i < chips.length; i++) chips[i].classList.remove("active");
     if (chips[0]) chips[0].classList.add("active");
     loadBooks(1);
   }
 
+  /* ============ 即时检索：防抖 + 输入法 + URL 同步 ============
+   * 这里集中踩掉三个坑：
+   *   ① 每敲一个字就发一次请求 → 打字快时一次检索打十几个 ajax（防抖 300ms 收口）
+   *   ② 中文输入法"拼字"阶段 input 事件也会连续触发 → 打拼音就搜一次（用 composition 状态挡住）
+   *   ③ 请求异步返回顺序不保证，先发的可能后到 → 用 reqSeq 只认最后一次的结果（防竞态）
+   */
+  (function bindKeyword() {
+    var kw = document.getElementById("keyword");
+    if (!kw || !kw.addEventListener) return;
+    kw.addEventListener("compositionstart", function () { composing = true; });
+    kw.addEventListener("compositionend", function () { composing = false; onKeywordInput(); });
+  })();
+
+  function onKeywordInput() {
+    if (composing) return;                       // 拼字中不发请求
+    var v = document.getElementById("keyword").value.trim();
+    document.getElementById("kwClear").style.display = v ? "flex" : "none";
+    clearTimeout(kwTimer);
+    kwTimer = setTimeout(function () {
+      if (v === state.keyword) return;           // 值没变就别白跑一次 ajax
+      state.keyword = v;
+      loadBooks(1);
+    }, 300);
+  }
+
+  function onKeywordKey(e) {
+    if (e.key === "Enter") { clearTimeout(kwTimer); applyFilter(); }   // 回车立刻搜，不等防抖
+    else if (e.key === "Escape") { clearKeyword(); }
+  }
+
+  function clearKeyword() {
+    clearTimeout(kwTimer);
+    document.getElementById("keyword").value = "";
+    document.getElementById("kwClear").style.display = "none";
+    if (state.keyword !== "") { state.keyword = ""; loadBooks(1); }
+    document.getElementById("keyword").focus();
+  }
+
   function applyFilter() {
+    clearTimeout(kwTimer);
     state.keyword = document.getElementById("keyword").value.trim();
     state.sort = document.getElementById("sortSel").value;
     state.publisherId = document.getElementById("pubSel").value;
     loadBooks(1);
   }
 
-  /* ---------- 图书列表 ---------- */
+  /* 检索条件同步到地址栏（replaceState 不产生历史记录）
+     → 刷新、把链接发给别人，打开的仍是同一批结果 */
+  function syncUrl() {
+    var parts = [];
+    if (state.keyword) parts.push("keyword=" + encodeURIComponent(state.keyword));
+    if (state.categoryId !== "") parts.push("categoryId=" + state.categoryId);
+    if (state.publisherId) parts.push("publisherId=" + state.publisherId);
+    if (state.onlyAvailable) parts.push("onlyAvailable=true");
+    if (state.sort !== "newest") parts.push("sort=" + state.sort);
+    if (state.page > 1) parts.push("page=" + state.page);
+    try {
+      history.replaceState(null, "", location.pathname + (parts.length ? "?" + parts.join("&") : ""));
+    } catch (e) { /* 用 file:// 直接打开时 replaceState 会抛错，忽略 */ }
+  }
+
+  /* 页面加载时从 URL 还原检索条件 */
+  function restoreFromUrl() {
+    var p = null;
+    try { p = new URLSearchParams(location.search); } catch (e) { return; }
+    if (!p) return;
+    if (p.get("keyword")) state.keyword = p.get("keyword");
+    if (p.get("categoryId")) state.categoryId = p.get("categoryId");
+    if (p.get("publisherId")) state.publisherId = p.get("publisherId");
+    if (p.get("onlyAvailable") === "true") state.onlyAvailable = true;
+    if (p.get("sort")) state.sort = p.get("sort");
+    var pg = parseInt(p.get("page"), 10);
+    if (pg > 0) state.page = pg;
+  }
+
+  /* ---------- 图书列表（ajax 局部刷新，不跳页、不整块重绘） ---------- */
   async function loadBooks(page) {
     state.page = page;
     var grid = document.getElementById("bookGrid");
-    grid.innerHTML = '<div class="loading-tip" style="grid-column:1/-1">加载中…</div>';
+    var seq = ++reqSeq;                      // 领一个请求号
+
+    /* 已有结果时保留旧卡片只做半透明（配合 CSS 的 .is-busy），首次/空态才铺骨架屏 */
+    if (grid.querySelector(".book-card")) grid.classList.add("is-busy");
+    else grid.innerHTML = skeletonHTML(state.size);
+    setSearchStatus("搜索中…");
 
     try {
-      var qs = "?page=" + page + "&size=" + state.size + "&sort=" + state.sort;
-      if (state.keyword) qs += "&keyword=" + encodeURIComponent(state.keyword);
-      if (state.categoryId !== "") qs += "&categoryId=" + state.categoryId;
-      if (state.publisherId) qs += "&publisherId=" + state.publisherId;
-      if (state.onlyAvailable) qs += "&onlyAvailable=true";
+      var filter = buildQuery();
+      var qs = "?page=" + page + "&size=" + state.size + (filter ? "&" + filter : "");
 
       var res = await request("GET", "/api/books" + qs);
+      if (seq !== reqSeq) return;            // 已有更新的请求在路上 → 丢弃这次结果
       renderBooks(res.list || []);
       renderPager("pager", res, function (p) { loadBooks(p); });
+      setSearchStatus("");
+      syncUrl();
     } catch (e) {
+      if (seq !== reqSeq) return;
+      grid.classList.remove("is-busy");
       grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1"><div class="big">⚠</div>' + escapeHtml(e.message) + "</div>";
+      setSearchStatus("");
     }
+  }
+
+  /* 按当前 state 拼筛选查询串（page / size 由 loadBooks 单独拼） */
+  function buildQuery() {
+    var parts = [];
+    if (state.keyword) parts.push("keyword=" + encodeURIComponent(state.keyword));
+    if (state.categoryId !== "") parts.push("categoryId=" + state.categoryId);
+    if (state.publisherId) parts.push("publisherId=" + state.publisherId);
+    if (state.onlyAvailable) parts.push("onlyAvailable=true");
+    if (state.sort !== "newest") parts.push("sort=" + state.sort);
+    return parts.join("&");
+  }
+
+  function setSearchStatus(txt) {
+    var el = document.getElementById("searchStatus");
+    if (el) el.textContent = txt || "";
+  }
+
+  /* 骨架屏：数量与真实结果一致，数据回来时高度不跳 */
+  function skeletonHTML(n) {
+    var one = '<div class="sk-card"><div class="sk-cover"></div><div class="sk-body">' +
+                '<div class="sk-line w80"></div><div class="sk-line w50"></div>' +
+                '<div class="sk-line w60"></div><div class="sk-line w40"></div>' +
+              "</div></div>";
+    var out = "";
+    for (var i = 0; i < (n || 10); i++) out += one;
+    return out;
+  }
+
+  /* 关键字高亮：必须先 escape 再包 <mark>，顺序反了就是 XSS */
+  function highlight(text, kw) {
+    var safe = escapeHtml(text);
+    if (!kw) return safe;
+    var k = escapeHtml(kw).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    try { return safe.replace(new RegExp("(" + k + ")", "gi"), '<mark class="hl">$1</mark>'); }
+    catch (e) { return safe; }
   }
 
   function coverHTML(b) {
@@ -391,8 +533,12 @@
 
   function renderBooks(list) {
     var grid = document.getElementById("bookGrid");
+    grid.classList.remove("is-busy");
     if (!list.length) {
-      grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1"><div class="big">🔍</div>没有找到符合条件的图书，换个条件试试</div>';
+      var tip = state.keyword
+        ? "没有找到含「" + escapeHtml(state.keyword) + "」的图书，换个词试试"
+        : "没有找到符合条件的图书，换个条件试试";
+      grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1"><div class="big">🔍</div>' + tip + "</div>";
       return;
     }
     grid.innerHTML = list.map(function (b) {
@@ -400,8 +546,8 @@
       return '<div class="book-card" onclick="openDetail(' + b.id + ')">' +
         '<div class="book-cover">' + coverHTML(b) + "</div>" +
         '<div class="book-body">' +
-          '<div class="book-title">' + escapeHtml(b.title) + "</div>" +
-          '<div class="book-author">' + escapeHtml(b.author) + "</div>" +
+          '<div class="book-title">' + highlight(b.title, state.keyword) + "</div>" +
+          '<div class="book-author">' + highlight(b.author, state.keyword) + "</div>" +
           '<div class="book-tags">' +
             '<span class="tag">' + escapeHtml(b.categoryName || "未分类") + "</span>" +
             '<span class="tag gray">借出 ' + b.borrowCount + " 次</span>" +
