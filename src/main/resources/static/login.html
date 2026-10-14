@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>登录 · Bookish 图书借阅系统</title>
+<link rel="stylesheet" href="css/style.css?v=20260929a">
+</head>
+<body class="login-page">
+
+<div class="login-box">
+  <div class="logo-big">📚</div>
+  <h1>Bookish</h1>
+  <div class="subtitle">图书借阅管理系统</div>
+
+  <div class="login-tabs">
+    <button id="tabLogin" class="active" onclick="switchTab('login')">登录</button>
+    <button id="tabReg" onclick="switchTab('reg')">注册</button>
+  </div>
+
+  <!-- 登录表单 -->
+  <form id="loginForm" onsubmit="doLogin(event)">
+    <div class="field">
+      <label>账号</label>
+      <input type="text" id="loginUsername" placeholder="请输入账号" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:12px" id="btnLogin">登 录</button>
+  </form>
+
+  <!-- 注册表单 -->
+  <form id="regForm" class="hidden" onsubmit="doRegister(event)">
+    <div class="field">
+      <label>账号</label>
+      <input type="text" id="regUsername" placeholder="登录用的账号，建议英文" required>
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input type="password" id="regPassword" placeholder="至少 6 位" required>
+    </div>
+    <div class="field">
+      <label>姓名 / 昵称</label>
+      <input type="text" id="regNickname" placeholder="显示用的名字" required>
+    </div>
+    <div class="field">
+      <label>手机号（选填）</label>
+      <input type="text" id="regPhone" placeholder="11 位手机号">
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:12px" id="btnReg">注 册</button>
+  </form>
+
+  <div class="login-tip">
+    <b>演示账号</b>（密码均为 <b>123456</b>）<br>
+    管理员：<b>admin</b> &nbsp;|&nbsp; 读者：<b>zhangsan</b>、lisi、wangwu<br>
+    <span style="color:var(--text-light)">多账号同时在线：Ctrl+T 新开标签页再登录</span>
+  </div>
+</div>
+
+<script src="js/api.js?v=20261010a"></script>
+<script>
+  /* 本页故意不设 window.PAGE_ROLE —— 这样 getUser() 恒为 null，
+     无论之前登录过谁，进登录页都显示表单，方便在新标签页换账号。 */
+
+  function switchTab(which) {
+    const isLogin = which === "login";
+    document.getElementById("tabLogin").classList.toggle("active", isLogin);
+    document.getElementById("tabReg").classList.toggle("active", !isLogin);
+    document.getElementById("loginForm").classList.toggle("hidden", !isLogin);
+    document.getElementById("regForm").classList.toggle("hidden", isLogin);
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnLogin");
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    if (!username || !password) { showToast("请填写账号和密码", "warn"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "登录中…";
+    try {
+      const res = await request("POST", "/api/login", { username: username, password: password });
+      setLogin(res.token, res.user);
+      showToast("登录成功，欢迎回来 " + res.user.nickname, "ok");
+      /* 跳转时先不禁用按钮 —— 页面带着"登录中…"状态被导航走的话，
+         浏览器会把它存进 bfcache，按返回键回来时脚本不重跑，按钮就永久卡死。
+         这里保持禁用防重复提交，交由下面的 pageshow 兜底还原。 */
+      setTimeout(function () { gotoHome(res.user.role); }, 500);
+    } catch (err) {
+      showToast(err.message, "err");
+      btn.disabled = false;
+      btn.textContent = "登 录";
+    }
+  }
+
+  async function doRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnReg");
+    const username = document.getElementById("regUsername").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const nickname = document.getElementById("regNickname").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+
+    if (!username || !password || !nickname) { showToast("请填写完整信息", "warn"); return; }
+    if (password.length < 6) { showToast("密码至少 6 位", "warn"); return; }
+    if (phone && !/^\d{11}$/.test(phone)) { showToast("手机号格式不对", "warn"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "注册中…";
+    try {
+      await request("POST", "/api/register", {
+        username: username, password: password, nickname: nickname, phone: phone
+      });
+      showToast("注册成功，请登录", "ok");
+      document.getElementById("loginUsername").value = username;
+      document.getElementById("loginPassword").value = "";
+      switchTab("login");
+    } catch (err) {
+      showToast(err.message, "err");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "注 册";
+    }
+  }
+
+  /* 把两个按钮还原成可点状态 */
+  function resetBtns() {
+    const b1 = document.getElementById("btnLogin");
+    if (b1) { b1.disabled = false; b1.textContent = "登 录"; }
+    const b2 = document.getElementById("btnReg");
+    if (b2) { b2.disabled = false; b2.textContent = "注 册"; }
+  }
+
+  /* 按浏览器"返回/前进"键回到本页时，页面是从 bfcache 里原样恢复的：
+     脚本不会重新执行，所以按钮会停在上次离开时的状态（如"登录中…"的禁用态）。
+     persisted=true 就代表是缓存恢复，这时手动把表单复位。 */
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    resetBtns();
+    document.getElementById("loginPassword").value = "";
+    switchTab("login");
+  });
+</script>
+</body>
+</html>

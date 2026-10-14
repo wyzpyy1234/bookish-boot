@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: ${url}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ${password}
+    druid:
+      initial-size: 5
+      max-active: 20
+      min-idle: 5
+mybatis:
+  type-aliases-package: com.ithw.pojo
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

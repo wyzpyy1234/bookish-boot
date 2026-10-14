@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ithw.dao.BookDao">
+    <sql id="bookwhere">
+        <where>
+            <if test="keyword !=null and keyword!=''">
+                and ((b.title like concat('%',#{keyword},'%')) or (b.author like concat('%',#{keyword},'%')))
+            </if>
+            <if test="categoryId != null">
+                and b.category_id = #{categoryId}
+            </if>
+            <if test="publisherId != null">
+                and b.publisher_id = #{publisherId}
+            </if>
+            <if test="onlyAvailable != null and onlyAvailable">
+                AND EXISTS (SELECT 1 FROM book_copy bc3
+                WHERE bc3.book_id = b.id AND bc3.status = 'available')
+            </if>
+        </where>
+    </sql>
+    <sql id="borrowFilter">
+        <where>
+            <if test="readerId != null"> AND br.reader_id = #{readerId} </if>
+            <if test="bookList.status == 'borrowed'"> AND br.status = 'borrowed' AND br.return_date IS NULL </if>
+            <if test="bookList.status == 'returned'"> AND br.status = 'returned' </if>
+            <if test="bookList.status == 'overdue'">
+                AND br.status = 'borrowed' AND br.return_date IS NULL AND br.due_date &lt; NOW()
+            </if>
+        </where>
+    </sql>
+    <sql id="unpaidFine">
+        SELECT IFNULL(SUM(amount),0) AS unpaidFine
+        FROM fine f
+        LEFT JOIN borrow_record br ON br.id=f.record_id
+        LEFT JOIN users u ON f.reader_id=u.id
+        WHERE f.reader_id=2 AND is_paid=0;
+    </sql>
+    <sql id="recordColumns">
+        SELECT br.id,
+        br.reader_id readerId,
+        u.nickname readerName,
+        br.copy_id copyId,
+        bc.barcode,
+        b.id bookId,
+        b.title bookTitle,
+        b.author bookAuthor,
+        c.name categoryName,
+        br.borrow_date borrowDate,
+        br.due_date dueDate,
+        br.return_date returnDate,
+        br.status,
+        br.renew_count renewCount,
+        p.name publisherName
+    </sql>
+    <sql id="recordFrom">
+        FROM borrow_record br
+        JOIN users u ON br.reader_id=u.id
+        JOIN book_copy bc ON br.copy_id=bc.id
+        JOIN book b ON bc.book_id = b.id
+        LEFT JOIN category c ON b.category_id=c.id
+        LEFT JOIN publisher p ON b.publisher_id=p.id
+        <where>
+            <if test="borrowRecordDto.keyword!=null">
+                AND (
+                u.nickname LIKE concat('%',#{borrowRecordDto.keyword},'%')
+                OR b.title LIKE concat('%',#{borrowRecordDto.keyword},'%')
+                OR bc.barcode LIKE concat('%',#{borrowRecordDto.keyword},'%')
+                )
+            </if>
+            <if test="borrowRecordDto.categoryId!=null">
+                AND b.category_id=#{borrowRecordDto.categoryId}
+            </if>
+            <if test="borrowRecordDto.status == 'borrowed'"> AND br.status = 'borrowed' AND br.return_date IS NULL </if>
+            <if test="borrowRecordDto.status == 'returned'"> AND br.status = 'returned' </if>
+            <if test="borrowRecordDto.status == 'overdue'">
+                AND br.status = 'borrowed' AND br.return_date IS NULL AND br.due_date &lt; NOW()
+            </if>
+            <if test="borrowRecordDto.startDate!=null and borrowRecordDto.endDate!=null">
+                AND br.borrow_date &gt;= #{borrowRecordDto.startDate} AND br.borrow_date &lt; date_add(#{borrowRecordDto.endDate},INTERVAL 1 day)
+            </if>
+        </where>
+    </sql>
+    <select id="categories" resultType="com.ithw.pojo.Category">
+        select * from category order by sort_no asc
+    </select>
+    
+    <select id="publishers" resultType="com.ithw.pojo.Publisher">
+        select * from publisher order by id asc
+    </select>
+
+    <select id="bookList" resultType="com.ithw.vo.BookItem">
+        SELECT b.id,b.isbn,b.title,b.author,b.category_id categoryId,c.name categoryName,
+        b.publisher_id publisherId,p.name publisherName,
+        b.price,b.publish_date publishDate,
+        b.intro,b.cover,
+        (SELECT COUNT(*) FROM book_copy  bc WHERE bc.book_id =b.id) AS totalCopies,
+        (SELECT COUNT(*) FROM book_copy bc WHERE bc.book_id =b.id AND bc.STATUS='available') AS availableCopies,
+        (SELECT COUNT(*) FROM borrow_record br JOIN book_copy bcc ON br.copy_id=bcc.id WHERE bcc.book_id=b.id)AS borrowCount
+        FROM book b LEFT JOIN publisher p ON b.publisher_id=p.id
+        LEFT JOIN category c ON b.category_id = c.id
+        <include refid="bookwhere"/>
+        <choose>
+            <when test="sort == 'priceAsc'">  ORDER BY b.price ASC  </when>
+            <when test="sort == 'priceDesc'"> ORDER BY b.price DESC </when>
+            <when test="sort == 'hot'">       ORDER BY borrowCount DESC </when>
+            <otherwise>                        ORDER BY b.id DESC    </otherwise>
+        </choose>
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="getBookById" resultType="com.ithw.vo.BookByIDVo">
+        SELECT b.id,
+        b.isbn,
+        b.title,
+        b.author,
+        c.name categoryName,
+        p.name publisherName,
+        p.address publisherAddress,
+        b.price,
+        b.publish_date publishDate,
+        b.intro,
+        b.cover,
+        (SELECT COUNT(*) FROM book_copy  bc WHERE bc.book_id =b.id) AS totalCopies,
+        (SELECT COUNT(*) FROM book_copy bc WHERE bc.book_id =b.id AND bc.STATUS='available') AS availableCopies,
+        (SELECT COUNT(*) FROM borrow_record br JOIN book_copy bcc ON br.copy_id=bcc.id WHERE bcc.book_id=b.id)AS borrowCount
+        FROM book b
+        LEFT JOIN publisher p ON b.publisher_id = p.id
+        LEFT JOIN category c ON b.category_id=c.id where b.id=#{id}
+    </select>
+
+    <select id="getBookCopy" resultType="com.ithw.pojo.BookCopy">
+        select id,barcode,status,location from book_copy where book_id=#{bookId}
+    </select>
+
+    <select id="getTotal" resultType="java.lang.Integer">
+        select count(*) from book b left join category c on b.category_id = c.id
+        <include refid="bookwhere"/>
+    </select>
+
+    <select id="getHot" resultType="com.ithw.vo.BookTop">
+        SELECT b.id, b.title, b.author, c.name AS category_name, b.cover,
+        COUNT(br.id) AS borrow_count
+        FROM borrow_record br
+        JOIN book_copy bc ON br.copy_id = bc.id
+        JOIN book      b  ON bc.book_id = b.id
+        LEFT JOIN category c ON b.category_id = c.id
+        GROUP BY b.id, b.title, b.author, c.name, b.cover
+        ORDER BY borrow_count DESC
+        LIMIT 10;
+    </select>
+
+    <select id="borrowHistory" resultType="com.ithw.vo.BorrowingHistoryList">
+        SELECT br.id,
+        br.reader_id readerId,
+        u.nickname readerName,
+        br.copy_id copyId,
+        bc.barcode,
+        b.id bookId,
+        b.title bookTitle,
+        b.author bookAuthor,
+        c.name categoryName,
+        br.borrow_date borrowDate,
+        br.due_date dueDate,
+        br.return_date returnDate,
+        br.status,
+        br.renew_count renewCount
+        FROM borrow_record br
+        JOIN users u ON br.reader_id=u.id
+        JOIN book_copy bc ON br.copy_id=bc.id
+        JOIN book b ON bc.book_id = b.id
+        LEFT JOIN category c ON b.category_id=c.id
+        <include refid="borrowFilter"/>
+        ORDER BY br.id DESC
+        LIMIT #{offset}, #{bookList.size}
+    </select>
+
+    <select id="getBorrowHistory" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM borrow_record br
+        <include refid="borrowFilter"/>
+    </select>
+
+    <select id="borrowsSummary" resultType="com.ithw.vo.BorrowsSummaryList">
+        SELECT
+        IFNULL(SUM(br.status='borrowed'),0) AS borrowing,
+        IFNULL(SUM(br.status='borrowed' AND return_date IS NULL AND due_date &lt; NOW()),0) AS overdue,
+        IFNULL(SUM(br.status='returned'),0) AS returned,
+        (SELECT IFNULL(SUM(amount),0) FROM fine f WHERE f.reader_id=br.reader_id  AND f.is_paid=0) AS unpaidFine
+        FROM borrow_record br
+        WHERE reader_id=#{id}
+    </select>
+
+    <select id="selectBorrowBook" resultType="com.ithw.pojo.BorrowRecord">
+        select * from borrow_record where id=#{id}
+    </select>
+
+    <update id="updateBorrowRecord">
+        update borrow_record set return_date = now(),status='returned' where id=#{id}
+    </update>
+
+    <update id="updateBookCopy">
+        update book_copy set status = 'available' where id = #{id}
+    </update>
+    
+    <insert id="insertFine">
+        insert into fine(record_id, reader_id, amount, reason, is_paid)
+        values(#{record_id},#{reader_id},#{amount},#{reason},#{is_paid})
+    </insert>
+
+    <update id="updateRenew">
+        update borrow_record set
+        due_date=date_add(due_date,INTERVAL 30 day),
+        renew_count=renew_count+1 where id=#{id} and renew_count &lt;2
+    </update>
+    
+    <select id="newDueDate" resultType="com.ithw.vo.RenewBookVo">
+        select due_date newDueDate,renew_count renewCount from borrow_record where id=#{id}
+    </select>
+
+    <insert id="insertBook" useGeneratedKeys="true" keyProperty="id">
+        insert into book (isbn,title,author,category_id,publisher_id,price,publish_date,intro)
+        values(#{isbn},#{title},#{author},#{categoryId},
+        #{publisherId},#{price},#{publishDate},#{intro})
+    </insert>
+
+    <insert id="insertBookCopy">
+        insert into book_copy (book_id,barcode,status) values(#{bookId},#{barcode},'available')
+    </insert>
+
+    <update id="updateBook">
+        update book set
+        isbn=#{book.isbn},
+        title=#{book.title},
+        author=#{book.author},
+        category_id=#{book.categoryId},
+        publisher_id=#{book.publisherId},
+        price=#{book.price},
+        publish_date=#{book.publishDate},
+        intro=#{book.intro} where id=#{id}
+    </update>
+
+    <select id="borrowed" resultType="java.lang.Integer">
+        select count(*) from borrow_record br join book_copy bc on br.copy_id=bc.id where bc.book_id=#{id}
+    </select>
+
+    <select id="getBorrowRecord" resultType="com.ithw.vo.BorrowRecordList">
+        <include refid="recordColumns"/>
+        <include refid="recordFrom"/>
+        ORDER BY br.id DESC
+        LIMIT #{offset}, #{borrowRecordDto.size}
+    </select>
+
+    <select id="borrowRecordTotal" resultType="java.lang.Integer">
+        select count(*)
+        <include refid="recordFrom"/>
+    </select>
+
+    <select id="statsDashboard" resultType="com.ithw.vo.StatsDashboardVo">
+        SELECT
+        (SELECT COUNT(*) FROM book)                                                   AS book_count,
+        (SELECT COUNT(*) FROM book_copy)                                              AS copy_count,
+        (SELECT COUNT(*) FROM users WHERE role = 'reader')                            AS reader_count,
+        (SELECT COUNT(*) FROM borrow_record WHERE status = 'borrowed')                AS borrowing_count,
+        (SELECT COUNT(*) FROM borrow_record
+        WHERE status = 'borrowed' AND return_date IS NULL AND due_date &lt; NOW())    AS overdue_count,
+        (SELECT COUNT(*) FROM borrow_record WHERE DATE(borrow_date) = CURDATE())      AS today_borrow_count,
+        (SELECT IFNULL(SUM(amount), 0) FROM fine WHERE is_paid = 0)                   AS unpaid_fine_total;
+    </select>
+    
+    <select id="categoryStats" resultType="com.ithw.vo.CategoryStats">
+        SELECT c.name AS category_name, COUNT(br.id) AS borrow_count
+        FROM borrow_record br
+        JOIN book_copy bc ON br.copy_id = bc.id
+        JOIN book      b  ON bc.book_id = b.id
+        JOIN category  c  ON b.category_id = c.id
+        GROUP BY c.id, c.name
+        ORDER BY borrow_count DESC;
+    </select>
+
+    <select id="monthlyStats" resultType="com.ithw.vo.MonthlyStats">
+        SELECT DATE_FORMAT(borrow_date, '%Y-%m') AS month, COUNT(*) AS borrow_count
+        FROM borrow_record
+        GROUP BY DATE_FORMAT(borrow_date, '%Y-%m')
+        ORDER BY month;
+    </select>
+</mapper>

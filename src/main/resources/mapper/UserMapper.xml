@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace 写你UserDao接口全类名 -->
+<mapper namespace="com.ithw.dao.UserDao">
+
+    <insert id="register">
+        insert into users (username,password,nickname,phone)values(#{username},#{password},#{nickname},#{phone})
+    </insert>
+
+    <select id="getUserByUserName" resultType="com.ithw.pojo.User">
+        select * from users where username=#{username}
+    </select>
+    <select id="getUserByPassword" resultType="com.ithw.pojo.User">
+        select * from users where password=#{password}
+    </select>
+    <select id="login" resultType="com.ithw.pojo.User">
+        select * from users where username=#{username} and password=#{password}
+    </select>
+    <!-- 写你的update、select等sql，就是你刚才的转账sql -->
+</mapper>
