@@ -47,6 +47,16 @@ async function doLogin(e) {
   }
 }
 
+/* 选「管理员」时才显示邀请码输入框；切回读者就清空，避免误带上去 */
+function onRegRoleChange() {
+  const role = document.getElementById("regRole").value;
+  const box = document.getElementById("regInviteBox");
+  const code = document.getElementById("regInviteCode");
+  const isAdminRole = role === "admin";
+  box.classList.toggle("hidden", !isAdminRole);
+  if (!isAdminRole && code) code.value = "";
+}
+
 async function doRegister(e) {
   e.preventDefault();
   const btn = document.getElementById("btnReg");
@@ -54,20 +64,29 @@ async function doRegister(e) {
   const password = document.getElementById("regPassword").value;
   const nickname = document.getElementById("regNickname").value.trim();
   const phone = document.getElementById("regPhone").value.trim();
+  const role = document.getElementById("regRole").value;
+  const inviteCode = document.getElementById("regInviteCode").value.trim();
 
   if (!username || !password || !nickname) { showToast("请填写完整信息", "warn"); return; }
   if (password.length < 6) { showToast("密码至少 6 位", "warn"); return; }
   if (phone && !/^\d{11}$/.test(phone)) { showToast("手机号格式不对", "warn"); return; }
+  /* 前端先挡一道，最终以后端校验为准（前端校验只是省一次请求） */
+  if (role === "admin" && !inviteCode) { showToast("注册管理员需要邀请码", "warn"); return; }
 
   btn.disabled = true;
   btn.textContent = "注册中…";
   try {
     await request("POST", "/api/register", {
-      username: username, password: password, nickname: nickname, phone: phone
+      username: username, password: password, nickname: nickname, phone: phone,
+      role: role, inviteCode: role === "admin" ? inviteCode : ""
     });
-    showToast("注册成功，请登录", "ok");
+    showToast(role === "admin" ? "管理员注册成功，请登录" : "注册成功，请登录", "ok");
     document.getElementById("loginUsername").value = username;
     document.getElementById("loginPassword").value = "";
+    /* 表单复位，避免下一个人打开时还留着重置前的邀请码 */
+    document.getElementById("regInviteCode").value = "";
+    document.getElementById("regRole").value = "reader";
+    document.getElementById("regInviteBox").classList.add("hidden");
     switchTab("login");
   } catch (err) {
     showToast(err.message, "err");

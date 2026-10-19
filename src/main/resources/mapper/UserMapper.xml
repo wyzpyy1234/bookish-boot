@@ -55,7 +55,8 @@
 
     </sql>
     <insert id="register">
-        insert into users (username,password,nickname,phone,status)values(#{username},#{password},#{nickname},#{phone},1)
+        insert into users (username,password,nickname,phone,role,max_borrow,status)
+        values(#{username},#{password},#{nickname},#{phone},#{role},#{maxBorrow},1)
     </insert>
 
     <select id="getUserByUserName" resultType="com.ithw.pojo.User">

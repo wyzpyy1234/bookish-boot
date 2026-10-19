@@ -314,4 +314,10 @@ window.addEventListener("pageshow", function (e) {
   if (e.persisted) { loadUnread(); loadList(state.page); }
 });
 
+/* 自动刷新：每 30 秒刷未读数 + 当前页列表；正在弹窗/看详情时不重渲染，避免打断操作 */
+document.addEventListener("bk:poll", function () {
+  loadUnread();
+  if (!isUiBlocked()) loadList(state.page);
+});
+
 annInit();

@@ -89,6 +89,12 @@ public class ResultCode {
     public static final int FIELD_OUT_OF_RANGE = 1007;
     public static final String FIELD_OUT_OF_RANGE_MSG = "参数超出范围";
 
+    /**
+     * 1008 管理员邀请码不正确（注册管理员时校验，防止陌生人自助成为管理员）
+     */
+    public static final int INVITE_CODE_ERROR = 1008;
+    public static final String INVITE_CODE_ERROR_MSG = "管理员邀请码不正确";
+
     // ==================== 2xxx 图书借阅业务 ====================
 
     /**

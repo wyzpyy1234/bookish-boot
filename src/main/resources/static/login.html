@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>登录 · Bookish 图书借阅系统</title>
-<link rel="stylesheet" href="css/style.css?v=20261019d">
+<link rel="stylesheet" href="css/style.css?v=20261019e">
 </head>
 <body>
 
@@ -76,28 +76,26 @@
           <label>手机号（选填）</label>
           <input type="text" id="regPhone" placeholder="11 位手机号">
         </div>
+        <div class="field">
+          <label>注册身份</label>
+          <select id="regRole" onchange="onRegRoleChange()">
+            <option value="reader">读者 · 借书 / 发帖</option>
+            <option value="admin">管理员 · 需邀请码</option>
+          </select>
+        </div>
+        <div class="field hidden" id="regInviteBox">
+          <label>管理员邀请码</label>
+          <input type="text" id="regInviteCode" placeholder="向站长索取，没有就保持“读者”" autocomplete="off">
+        </div>
         <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnReg">注 册</button>
       </form>
-
-      <div class="login-tip">
-        <b>演示账号</b>（密码统一 <b>123456</b>）：
-        <div class="lt-copy">
-          <button type="button" onclick="fillDemo('admin')">管理员 admin</button>
-          <button type="button" onclick="fillDemo('zhangsan')">读者 zhangsan</button>
-          <button type="button" onclick="fillDemo('lisi')">读者 lisi</button>
-          <button type="button" onclick="fillDemo('wangwu')">已禁言 wangwu</button>
-        </div>
-        <div class="mt-8" style="color:var(--text-3)">
-          点按钮即填充账号密码 · 多账号同时在线请 Ctrl+T 新开标签页
-        </div>
-      </div>
     </div>
   </main>
 
 </div>
 
-<script src="js/mock.js?v=20261019d"></script>
-<script src="js/api.js?v=20261019d"></script>
-<script src="js/login.js?v=20261019d"></script>
+<script src="js/mock.js?v=20261019e"></script>
+<script src="js/api.js?v=20261019e"></script>
+<script src="js/login.js?v=20261019e"></script>
 </body>
 </html>

@@ -19,3 +19,10 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# 业务自定义配置
+bookish-boot:
+  upload:
+    dir: ./uploads
+  # 管理员注册邀请码：线上用环境变量 ADMIN_INVITE_CODE 覆盖即可，不用改代码
+  admin-invite-code: ${ADMIN_INVITE_CODE:bookish-admin-2026}

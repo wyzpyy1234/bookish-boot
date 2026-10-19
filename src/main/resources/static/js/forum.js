@@ -821,4 +821,12 @@ async function loadStats() {
 
 window.addEventListener("pageshow", function (e) { if (e.persisted) refreshBadges(); });
 
+/* 自动刷新：统计栏每次都刷；列表只在「列表视图 + 没有弹窗/抽屉」时刷，避免打断发帖和看详情 */
+document.addEventListener("bk:poll", function () {
+  loadStats();
+  const listView = document.getElementById("viewList");
+  const inListView = listView && !listView.classList.contains("hidden");
+  if (inListView && !isUiBlocked()) loadPosts(state.page);
+});
+
 forumInit();

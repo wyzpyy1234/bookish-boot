@@ -646,6 +646,36 @@ function mountShell(meta) {
   }
 
   refreshBadges();
+  startPolling();
+}
+
+/* ==================== 自动刷新（轮询） ====================
+ * 作用：不用手动 F5 也能看到新消息 / 新的待处理举报
+ *   - 每 POLL_INTERVAL 毫秒刷新一次侧边栏红点
+ *   - 同时广播 bk:poll 事件，当前页面可以自己决定刷新哪块内容
+ *   - 标签页切到后台时不发请求（省流量、省额度）；切回来立刻补一次
+ * ========================================================== */
+var POLL_INTERVAL = 30000;   /* 想更快可以改小，比如 15000 = 15 秒 */
+var _pollTimer = null;
+
+function startPolling() {
+  if (_pollTimer) return;    /* 一个页面只开一个定时器 */
+  _pollTimer = setInterval(function () {
+    if (document.visibilityState === "hidden") return;
+    refreshBadges();
+    document.dispatchEvent(new CustomEvent("bk:poll"));
+  }, POLL_INTERVAL);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible") return;
+    refreshBadges();
+    document.dispatchEvent(new CustomEvent("bk:poll"));
+  });
+}
+
+/* 弹窗 / 抽屉开着时（正在看详情、填写表单），轮询只更新红点，不重渲染列表 */
+function isUiBlocked() {
+  return !!document.querySelector(".modal.show, .drawer.show");
 }
 
 function toggleSidebar(force) {

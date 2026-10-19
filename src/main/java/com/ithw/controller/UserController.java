@@ -26,6 +26,12 @@ public class UserController {
     private static final Log log = LogFactory.getLog(UserController.class);
     @Value("${bookish-boot.upload.dir:./uploads}")
     private String uploadDir;
+
+    /**
+     * 管理员注册邀请码：读配置，线上可用环境变量 ADMIN_INVITE_CODE 覆盖，不用改代码
+     */
+    @Value("${bookish-boot.admin-invite-code:bookish-admin-2026}")
+    private String adminInviteCode;
     private UserService userService;
     public UserController(UserService userService){
         this.userService = userService;
@@ -37,9 +43,24 @@ public class UserController {
                 || userVo.getPassword().length()<6){
             return Result.fail(ResultCode.PARAM_ERROR,ResultCode.PARAM_ERROR_MSG);
         }
+        /* 角色只允许 reader / admin；不传默认读者，传了别的值一律按读者处理 */
+        String role = userVo.getRole();
+        if (role == null || role.trim().isEmpty()) {
+            role = "reader";
+        }
+        if (!"reader".equals(role) && !"admin".equals(role)) {
+            role = "reader";
+        }
+        /* 注册管理员必须带正确邀请码：否则任何人都能自助变成管理员 */
+        if ("admin".equals(role)) {
+            String code = userVo.getInviteCode();
+            if (code == null || !adminInviteCode.equals(code.trim())) {
+                return Result.fail(ResultCode.INVITE_CODE_ERROR,ResultCode.INVITE_CODE_ERROR_MSG);
+            }
+        }
         BeanUtils.copyProperties(userVo, user);
-        user.setRole("reader");
-        user.setMaxBorrow(5);
+        user.setRole(role);
+        user.setMaxBorrow("admin".equals(role) ? 99 : 5);
         if(userService.getUserByUserName(user.getUsername())!=null){
             return Result.fail(ResultCode.ACCOUNT_EXIST,ResultCode.ACCOUNT_EXIST_MSG);
         }
