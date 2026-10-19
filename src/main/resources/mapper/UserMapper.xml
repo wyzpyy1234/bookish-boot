@@ -12,6 +12,10 @@
                 <when test="isAdmin">
                     and fp.status = #{dto.status}
                 </when>
+                <!-- 读者按状态筛：只能看自己的（待审核 0 / 未通过 2） -->
+                <when test="dto.status != null">
+                    and fp.user_id = #{id} and fp.status = #{dto.status}
+                </when>
                 <otherwise>
                     and (fp.status=1 or(fp.user_id=#{id} and fp.status in (0,2)))
                 </otherwise>

@@ -29,7 +29,7 @@ public interface UserDao {
     Integer getTodayPosts();
     @Select("SELECT COUNT(*) FROM forum_comment WHERE status = 1")
     Integer getTotalComments();
-    @Select("SELECT COUNT(*) FROM forum_post WHERE user_id=#{id} AND status=1")
+    @Select("SELECT COUNT(*) FROM forum_post WHERE user_id=#{id} AND status <> -1")
     Integer getMyPosts(Integer id);
     @Select("SELECT COUNT(*) FROM forum_comment WHERE user_id=#{id} AND status=1")
     Integer getMyComments(Integer id);

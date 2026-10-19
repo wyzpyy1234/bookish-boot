@@ -24,7 +24,7 @@ TAGS.forEach(function (t) { TAG_MAP[t.key] = t; });
 const isAdmin = me.role === "admin";
 const muted = isMuted(me);          /* 禁言中则禁用所有发言入口 */
 
-var state = { keyword: "", tag: "", sort: "newest", mine: false, essenceOnly: false, pending: false, page: 1, size: 10 };
+var state = { keyword: "", tag: "", sort: "newest", mine: false, essenceOnly: false, pending: false, rejected: false, page: 1, size: 10 };
 var reqSeq = 0, kwTimer = null, composing = false;
 
 /* 详情页状态 */
@@ -48,11 +48,7 @@ function forumInit() {
   buildTagSelect();
   loadStats();
 
-  /* 审核入口只给管理员 */
-  if (isAdmin) {
-    const chip = document.getElementById("chipPending");
-    if (chip) chip.style.display = "";
-  }
+  /* 「待审核 / 未通过」两个筛选对所有人开放：管理员看全站，读者只看自己的（后端已按角色限权） */
 
   var kw = document.getElementById("fKeyword");
   if (kw) {
@@ -158,16 +154,27 @@ function toggleEssence() {
   loadPosts(1);
 }
 
-/* 管理员：只看待审核帖 */
+/* 只看待审核：管理员看全站待审，读者看自己的待审 */
 function togglePending() {
   state.pending = !state.pending;
+  if (state.pending) state.rejected = false;   /* 两个状态筛选互斥 */
   document.getElementById("chipPending").classList.toggle("active", state.pending);
+  document.getElementById("chipRejected").classList.remove("active");
+  loadPosts(1);
+}
+
+/* 只看未通过：管理员看全站已驳回，读者看自己的 */
+function toggleRejected() {
+  state.rejected = !state.rejected;
+  if (state.rejected) state.pending = false;
+  document.getElementById("chipRejected").classList.toggle("active", state.rejected);
+  document.getElementById("chipPending").classList.remove("active");
   loadPosts(1);
 }
 
 function resetForumFilter() {
   clearTimeout(kwTimer);
-  state.keyword = ""; state.tag = ""; state.sort = "newest"; state.mine = false; state.essenceOnly = false; state.pending = false;
+  state.keyword = ""; state.tag = ""; state.sort = "newest"; state.mine = false; state.essenceOnly = false; state.pending = false; state.rejected = false;
   document.getElementById("fKeyword").value = "";
   document.getElementById("fClear").style.display = "none";
   pickTagByKey("");
@@ -175,6 +182,7 @@ function resetForumFilter() {
   document.getElementById("chipMine").classList.remove("active");
   document.getElementById("chipEssence").classList.remove("active");
   document.getElementById("chipPending").classList.remove("active");
+  document.getElementById("chipRejected").classList.remove("active");
   loadPosts(1);
 }
 
@@ -217,7 +225,8 @@ async function loadPosts(page) {
       (state.sort !== "newest" ? "&sort=" + state.sort : "") +
       (state.mine ? "&mine=true" : "") +
       (state.essenceOnly ? "&essenceOnly=true" : "") +
-      (state.pending ? "&status=0" : "");
+      (state.pending ? "&status=0" : "") +
+      (state.rejected ? "&status=2" : "");
 
     const res = await request("GET", "/api/forum/posts" + qs);
     if (seq !== reqSeq) return;
@@ -253,8 +262,10 @@ function postBadges(p) {
 function renderPosts(list) {
   const box = document.getElementById("postList");
   if (!list.length) {
-    const desc = state.mine ? "你还没有发过帖子" :
-                 (state.essenceOnly ? "还没有精华帖" : "还没有符合条件的帖子");
+    const desc = state.pending ? (isAdmin ? "没有等待审核的帖子" : "你没有待审核的帖子")
+               : state.rejected ? (isAdmin ? "没有被驳回的帖子" : "你没有未通过的帖子")
+               : state.mine ? "你还没有发过帖子"
+               : (state.essenceOnly ? "还没有精华帖" : "还没有符合条件的帖子");
     box.innerHTML = emptyState("💬", "这里还没有帖子", desc,
       muted ? "" : '<button class="btn btn-primary btn-sm" onclick="openCompose()">✏️ 发第一帖</button>');
     return;
