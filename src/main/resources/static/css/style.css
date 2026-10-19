@@ -1148,34 +1148,62 @@ mark.hl, .hl { background: #FFF1A8; color: inherit; padding: 0 1px; border-radiu
 }
 .login-aside {
   flex: 1; position: relative; overflow: hidden; display: none;
-  padding: 56px;
+  padding: 52px 56px 38px;
   background: linear-gradient(150deg, #312E81 0%, #4F46E5 45%, #7C3AED 100%);
-  color: #fff; flex-direction: column; justify-content: space-between;
+  color: #fff; flex-direction: column; justify-content: flex-start;
 }
 .login-aside::before, .login-aside::after {
   content: ""; position: absolute; border-radius: 50%; pointer-events: none;
 }
 .login-aside::before {
-  width: 520px; height: 520px; right: -180px; top: -160px;
-  background: radial-gradient(circle, rgba(255, 255, 255, .16), transparent 65%);
+  width: 560px; height: 560px; right: -200px; top: -190px;
+  background: radial-gradient(circle, rgba(255, 255, 255, .18), transparent 65%);
 }
 .login-aside::after {
-  width: 420px; height: 420px; left: -140px; bottom: -150px;
-  background: radial-gradient(circle, rgba(255, 255, 255, .12), transparent 65%);
+  width: 460px; height: 460px; left: -170px; bottom: -190px;
+  background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 65%);
 }
 .la-brand { display: flex; align-items: center; gap: 11px; font-size: 17px; font-weight: 650; position: relative; }
 .la-brand .sb-logo { box-shadow: none; background: rgba(255, 255, 255, .18); backdrop-filter: blur(6px); }
-.la-mid { position: relative; max-width: 430px; }
-.la-mid h2 { font-size: 32px; line-height: 1.35; letter-spacing: -.02em; margin-bottom: 16px; font-weight: 700; }
-.la-mid p { font-size: 14.5px; line-height: 1.85; color: rgba(255, 255, 255, .84); }
-.la-feats { display: flex; flex-direction: column; gap: 11px; margin-top: 30px; }
-.la-feat { display: flex; align-items: center; gap: 11px; font-size: 13.5px; color: rgba(255, 255, 255, .9); }
+/* 正文在「品牌」与「页脚」之间垂直居中，不再是 space-between 扯开的两端 */
+.la-mid {
+  position: relative; max-width: 470px; flex: 1;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 0 24px;
+}
+.la-eyebrow {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px; letter-spacing: .1em; color: rgba(255, 255, 255, .8);
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .18);
+  padding: 5px 12px 5px 10px; border-radius: 999px; margin-bottom: 20px;
+}
+.la-eyebrow::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: #6EE7B7; box-shadow: 0 0 0 3px rgba(110, 231, 183, .18);
+}
+.la-mid h2 { font-size: 34px; line-height: 1.32; letter-spacing: -.025em; margin-bottom: 18px; font-weight: 700; }
+.la-mid p { font-size: 14.5px; line-height: 1.85; color: rgba(255, 255, 255, .82); max-width: 420px; }
+.la-feats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 32px; }
+.la-feat {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border-radius: 12px;
+  background: rgba(255, 255, 255, .075);
+  border: 1px solid rgba(255, 255, 255, .12);
+  transition: background .18s, border-color .18s, transform .18s;
+}
+.la-feat:hover { background: rgba(255, 255, 255, .13); border-color: rgba(255, 255, 255, .2); transform: translateY(-1px); }
 .la-feat i {
   width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
   background: rgba(255, 255, 255, .16); display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-style: normal;
 }
-.la-foot { position: relative; font-size: 12.5px; color: rgba(255, 255, 255, .6); }
+.la-feat b { display: block; font-size: 13px; font-weight: 600; line-height: 1.45; color: #fff; }
+.la-feat span { display: block; font-size: 11.5px; color: rgba(255, 255, 255, .66); margin-top: 2px; line-height: 1.45; }
+.la-foot {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: 12px; color: rgba(255, 255, 255, .58); letter-spacing: .02em;
+}
 
 .login-main {
   width: 100%; max-width: 480px; flex-shrink: 0;
@@ -1256,6 +1284,11 @@ mark.hl, .hl { background: #FFF1A8; color: inherit; padding: 0 1px; border-radiu
   .book-grid { grid-template-columns: repeat(4, 1fr); }
   .hot-carousel { --hot-visible: 4; }
   .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  /* 左栏变窄后 2×2 卡片会挤，退成单列 */
+  .login-aside { padding: 44px 40px 32px; }
+  .la-mid h2 { font-size: 28px; }
+  .la-feats { grid-template-columns: 1fr; gap: 8px; margin-top: 26px; }
+  .la-feat { padding: 10px 12px; }
 }
 @media (max-width: 1024px) {
   .forum-layout { grid-template-columns: 1fr; }
