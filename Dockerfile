@@ -34,5 +34,7 @@ ENV TZ=Asia/Shanghai
 
 EXPOSE 8080
 
-# 云平台会注入 PORT；本地不设就走 8080
-ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=${PORT:-8080}"]
+# 启动前先自检环境变量：变量有没有注入、URL 到底指向哪，一眼可见
+# 密码只打长度不打明文，长度 0 就说明这条没填
+# exec 让 java 成为 PID 1，停止服务时能收到 SIGTERM 优雅退出
+ENTRYPOINT ["sh", "-c", "echo '--- runtime env check ---'; echo \"PORT=$PORT\"; echo \"DB_URL=$SPRING_DATASOURCE_URL\"; echo \"DB_USER=$SPRING_DATASOURCE_USERNAME\"; echo \"SPRING_PWD_LEN=${#SPRING_DATASOURCE_PASSWORD}\"; echo \"DB_PWD_LEN=${#DB_PASSWORD}\"; echo '--- starting ---'; exec java -jar app.jar --server.port=${PORT:-8080}"]
