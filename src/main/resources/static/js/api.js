@@ -133,14 +133,16 @@ function request(method, path, body, opts) {
     method: method,
     headers: headers,
     body: body ? JSON.stringify(body) : undefined
+  }).catch(function () {
+    /* fetch 本身失败：后端没启动 / 网络断开 / 请求被拦截，统一给用户看得懂的话 */
+    throw new Error("服务器连接失败，请检查网络后重试");
   }).then(function (res) {
     return res.text().then(function (txt) {
       let json;
       try { json = JSON.parse(txt); }
       catch (e) {
-        /* 后端还没实现这个接口时，Tomcat 会返回 404/500 的 HTML 页面 */
-        throw new Error("接口 " + method + " " + path + " 返回了非 JSON 内容（HTTP " + res.status +
-                        "）。若是 404，说明后端还没写这个接口；想先看界面效果就把 api.js 顶部 USE_MOCK 改成 true。");
+        /* 后端未启动或出错时，可能返回 Tomcat 的 HTML 错误页 */
+        throw new Error("服务器异常（HTTP " + res.status + "），请稍后重试");
       }
       if (json.code === 401) {
         clearLogin();
@@ -650,6 +652,12 @@ function toggleSidebar(force) {
   const sb = document.getElementById("sidebar");
   const mk = document.getElementById("sidebarMask");
   if (!sb) return;
+  /* 宽屏时侧边栏常驻，汉堡按钮无意义：直接复位，不弹遮罩（避免整页变模糊） */
+  if (window.innerWidth > 960) {
+    sb.classList.remove("open");
+    if (mk) mk.classList.remove("show");
+    return;
+  }
   const open = typeof force === "boolean" ? force : !sb.classList.contains("open");
   sb.classList.toggle("open", open);
   if (mk) mk.classList.toggle("show", open);

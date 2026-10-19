@@ -231,13 +231,10 @@ async function loadPosts(page) {
   }
 }
 
-/* 接口没实现时给出可操作提示（不是白屏） */
+/* 加载失败时给用户看得懂的提示 + 重试入口（不暴露开发配置） */
 function failState(e, what) {
-  const msg = escapeHtml(e && e.message || "加载失败");
-  const mockHint = USE_MOCK ? "" :
-    "<p style=\"margin-top:8px\">想让界面先跑起来？把 <b>js/api.js</b> 顶部的 " +
-    "<b>USE_MOCK</b> 改成 <b>true</b>，即可用内置假数据预览全部功能。</p>";
-  return emptyState("🔌", (what || "") + "加载失败", msg + mockHint,
+  const msg = escapeHtml(e && e.message || "服务器连接失败，请稍后重试");
+  return emptyState("🔌", (what || "") + "加载失败", msg,
     '<button class="btn btn-ghost btn-sm" onclick="location.reload()">重新加载</button>');
 }
 
@@ -818,8 +815,7 @@ async function loadStats() {
         '<b style="color:' + (s.pendingReports ? "var(--danger)" : "inherit") + '">' +
         (s.pendingReports || 0) + "</b></div>" : "");
   } catch (e) {
-    box.innerHTML = '<div class="text-xs text-light" style="padding:6px 0">概览接口未实现（' +
-      escapeHtml(e.message).slice(0, 40) + "…）</div>";
+    box.innerHTML = '<div class="text-xs text-light" style="padding:6px 0">数据加载失败，请稍后重试</div>';
   }
 }
 

@@ -122,10 +122,9 @@ async function loadList(page) {
 }
 
 function failState(e) {
-  const mockHint = USE_MOCK ? "" :
-    "<p style=\"margin-top:8px\">后端 4.x 接口还没写？把 <b>js/api.js</b> 顶部的 " +
-    "<b>USE_MOCK</b> 改成 <b>true</b> 即可用假数据预览本页。</p>";
-  return emptyState("🔌", "公告加载失败", escapeHtml(e && e.message || "加载失败") + mockHint);
+  return emptyState("🔌", "公告加载失败",
+    escapeHtml(e && e.message || "服务器连接失败，请稍后重试"),
+    '<button class="btn btn-ghost btn-sm" onclick="location.reload()">重新加载</button>');
 }
 
 function renderList(list) {
