@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>登录 · Bookish 图书借阅系统</title>
-<link rel="stylesheet" href="css/style.css?v=20261019f">
+<link rel="stylesheet" href="css/style.css?v=20261019g">
 </head>
 <body>
 
@@ -57,7 +57,10 @@
         </div>
         <div class="field">
           <label>密码</label>
-          <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" required>
+          <div class="pwd-wrap">
+            <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" required>
+            <button type="button" class="pwd-eye" onclick="togglePwd('loginPassword', this)" aria-label="显示密码" tabindex="-1">👁</button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnLogin">登 录</button>
       </form>
@@ -70,7 +73,10 @@
         </div>
         <div class="field">
           <label>密码</label>
-          <input type="password" id="regPassword" placeholder="至少 6 位" required>
+          <div class="pwd-wrap">
+            <input type="password" id="regPassword" placeholder="至少 6 位" autocomplete="new-password" required>
+            <button type="button" class="pwd-eye" onclick="togglePwd('regPassword', this)" aria-label="显示密码" tabindex="-1">👁</button>
+          </div>
         </div>
         <div class="field">
           <label>姓名 / 昵称</label>
@@ -89,7 +95,10 @@
         </div>
         <div class="field hidden" id="regInviteBox">
           <label>管理员邀请码</label>
-          <input type="text" id="regInviteCode" placeholder="向站长索取，没有就保持“读者”" autocomplete="off">
+          <div class="pwd-wrap">
+            <input type="password" id="regInviteCode" placeholder="向站长索取，没有就保持“读者”" autocomplete="off">
+            <button type="button" class="pwd-eye" onclick="togglePwd('regInviteCode', this)" aria-label="显示邀请码" tabindex="-1">👁</button>
+          </div>
         </div>
         <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnReg">注 册</button>
       </form>
@@ -98,8 +107,8 @@
 
 </div>
 
-<script src="js/mock.js?v=20261019f"></script>
-<script src="js/api.js?v=20261019f"></script>
-<script src="js/login.js?v=20261019f"></script>
+<script src="js/mock.js?v=20261019g"></script>
+<script src="js/api.js?v=20261019g"></script>
+<script src="js/login.js?v=20261019g"></script>
 </body>
 </html>

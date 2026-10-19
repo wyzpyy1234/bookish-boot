@@ -4,6 +4,17 @@
  *   无论之前登录过谁，进登录页都显示表单，方便在新标签页换账号。
  * ========================================================== */
 
+/* 密码 / 邀请码明文切换：点眼睛显示，再点隐藏 */
+function togglePwd(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const show = el.type === "password";
+  el.type = show ? "text" : "password";
+  btn.textContent = show ? "🙈" : "👁";
+  btn.classList.toggle("on", show);
+  btn.setAttribute("aria-label", show ? "隐藏" : "显示");
+}
+
 function switchTab(which) {
   const isLogin = which === "login";
   document.getElementById("tabLogin").classList.toggle("active", isLogin);
