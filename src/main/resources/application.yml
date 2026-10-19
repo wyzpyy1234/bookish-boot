@@ -19,6 +19,3 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
-bookish-boot:
-  upload:
-    dir: ${UPLOAD_DIR:./uploads}

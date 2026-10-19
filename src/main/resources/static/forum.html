@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>交流论坛 · Bookish</title>
+<link rel="stylesheet" href="css/style.css?v=20261019a">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="content">
+      <div class="forum-layout">
+
+        <!-- ==================== 左：列表 / 详情 ==================== -->
+        <div>
+          <!-- 被禁言提示条 -->
+          <div class="mute-tip" id="muteTip" style="display:none"></div>
+
+          <!-- ---------- 列表视图 ---------- -->
+          <div id="viewList">
+            <div class="card">
+              <div class="card-body" style="padding:14px 16px">
+                <div class="search-row">
+                  <div class="search-wrap">
+                    <span class="s-ico">🔍</span>
+                    <input type="text" id="fKeyword" placeholder="搜索标题或内容…"
+                           oninput="onKeywordInput()" onkeydown="onKeywordKey(event)" autocomplete="off">
+                    <button type="button" class="s-clear" id="fClear" title="清空" onclick="clearKeyword()">×</button>
+                  </div>
+                  <span class="seg" id="sortSeg">
+                    <button class="seg-btn active" data-sort="newest" onclick="setSort('newest')">最新</button>
+                    <button class="seg-btn" data-sort="hot" onclick="setSort('hot')">热门</button>
+                    <button class="seg-btn" data-sort="active" onclick="setSort('active')">最近回复</button>
+                  </span>
+                </div>
+                <div class="chips mt-16" id="tagChips"></div>
+                <div class="chips mt-8">
+                  <span class="chip" id="chipMine" onclick="toggleMine()">👤 我的帖子</span>
+                  <span class="chip" id="chipEssence" onclick="toggleEssence()">⭐ 只看精华</span>
+                  <span class="chip" id="chipPending" onclick="togglePending()" style="display:none">⏳ 待审核</span>
+                  <span class="chip" onclick="resetForumFilter()">↺ 重置</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="postList" class="mt-16"></div>
+            <div id="pager" class="pager"></div>
+          </div>
+
+          <!-- ---------- 详情视图（JS 渲染） ---------- -->
+          <div id="viewDetail" class="hidden">
+            <button class="btn btn-ghost btn-sm mb-16" onclick="backToList()">‹ 返回帖子列表</button>
+            <div id="detailWrap"></div>
+          </div>
+        </div>
+
+        <!-- ==================== 右：侧边信息 ==================== -->
+        <aside class="forum-side">
+          <div class="card">
+            <div class="card-head"><h3>💬 论坛概览</h3></div>
+            <div class="card-body" id="forumStats" style="padding:8px 18px 14px">
+              <div class="loading-tip" style="padding:14px">加载中…</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>🏷️ 话题标签</h3></div>
+            <div class="card-body">
+              <div class="side-tags" id="sideTags"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body" style="padding:14px 18px">
+              <div style="font-size:13px;line-height:1.9;color:var(--text-2)">
+                <b style="display:block;margin-bottom:6px">发帖规范</b>
+                1. 禁止广告与交易信息<br>
+                2. 禁止人身攻击与辱骂<br>
+                3. 提问前先搜索历史帖<br>
+                4. 违规内容将被隐藏或删除，严重者禁言
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ==================== 发帖 / 编辑 弹窗 ==================== -->
+<div class="modal-mask" id="composeModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 id="composeTitle">发布新帖</h3>
+      <button class="modal-close" onclick="closeModal('composeModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>标题 <span class="text-light">（最多 120 字）</span></label>
+        <input type="text" id="cpTitle" maxlength="120" placeholder="用一句话说清楚你要聊什么">
+      </div>
+      <div class="field">
+        <label>话题标签</label>
+        <select id="cpTag"></select>
+      </div>
+      <div class="field">
+        <label>正文 <span class="text-light">（支持换行，最多 5000 字）</span></label>
+        <textarea id="cpContent" maxlength="5000" style="min-height:180px"
+                  placeholder="详细描述你的问题或想法…"></textarea>
+        <div class="hint"><span id="cpCount">0</span> / 5000</div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>配图 <span class="text-light">（最多 3 张，单张 ≤ 2MB）</span></label>
+        <div class="compose-imgs" id="cpImgs"></div>
+        <input type="file" id="cpFile" accept="image/*" style="display:none" onchange="cpFileChosen(this)">
+        <div class="pf-progress" id="cpProgress" style="display:none;margin-top:12px">
+          <div class="pf-progress-bar" id="cpProgressBar"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer text-sm text-light">发布后可在「我的帖子」里查看与编辑</span>
+      <button class="btn btn-ghost" onclick="closeModal('composeModal')">取消</button>
+      <button class="btn btn-primary" id="cpSubmit" onclick="submitPost()">发布</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 举报弹窗 ==================== -->
+<div class="modal-mask" id="reportModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h3>举报内容</h3>
+      <button class="modal-close" onclick="closeModal('reportModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="pf-tip">管理员会尽快核实。恶意举报同样会被处理。</div>
+      <div class="field">
+        <label>举报类型</label>
+        <select id="rpType">
+          <option value="spam">广告 / 灌水</option>
+          <option value="abuse">辱骂 / 人身攻击</option>
+          <option value="illegal">违法违规</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>补充说明（选填）</label>
+        <textarea id="rpReason" maxlength="200" placeholder="简单说明一下原因，方便管理员判断"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('reportModal')">取消</button>
+      <button class="btn btn-danger" id="rpSubmit" onclick="submitReport()">提交举报</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/forum.js?v=20261019a"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>个人中心 · Bookish</title>
+<link rel="stylesheet" href="css/style.css?v=20261019a">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="content">
+
+      <!-- ============ 顶部头像横幅 ============ -->
+      <div class="profile-hero">
+        <button type="button" class="pf-avatar pf-avatar-lg" id="pfAvatar" title="点击更换头像" onclick="pfPickAvatar()"></button>
+        <div class="profile-hero-info">
+          <h2 id="phNickname">—</h2>
+          <p id="phSub">—</p>
+          <div class="profile-hero-badges" id="phBadges"></div>
+        </div>
+        <div class="profile-hero-actions">
+          <button class="btn btn-primary btn-sm" onclick="pfPickAvatar()">更换头像</button>
+          <button class="btn btn-ghost btn-sm" id="pfResetAvatar" onclick="pfRemoveAvatar()" style="display:none">恢复默认</button>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+
+        <!-- ============ 左：基本资料 ============ -->
+        <div class="card">
+          <div class="card-head">
+            <h3>基本资料</h3>
+            <span class="text-xs text-light">带 <i class="req">*</i> 的修改后需要点击「保存资料」</span>
+          </div>
+          <div class="card-body">
+            <div class="pf-drop" id="pfDrop" onclick="pfPickAvatar()">
+              <b>把图片拖到这里</b><span>或点击此处选择文件 · JPG / PNG / GIF / WebP · ≤ 2MB</span>
+            </div>
+            <input type="file" id="pfFile" accept="image/*" style="display:none" onchange="pfFileChosen(this)">
+            <div class="pf-progress" id="pfProgress" style="display:none">
+              <div class="pf-progress-bar" id="pfProgressBar"></div>
+            </div>
+
+            <form id="pfInfoForm" onsubmit="pfSaveInfo(event)">
+              <div class="field-row">
+                <div class="field">
+                  <label>用户 ID</label>
+                  <input type="text" id="piId" disabled>
+                </div>
+                <div class="field">
+                  <label>登录账号</label>
+                  <input type="text" id="piUsername" disabled>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>昵称 <i class="req">*</i></label>
+                  <input type="text" id="piNickname" maxlength="20" placeholder="论坛发言显示的名字" required>
+                </div>
+                <div class="field">
+                  <label>手机号</label>
+                  <input type="text" id="piPhone" maxlength="11" placeholder="11 位手机号（选填）">
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>角色</label>
+                  <input type="text" id="piRole" disabled>
+                </div>
+                <div class="field">
+                  <label>可借上限</label>
+                  <input type="text" id="piMaxBorrow" disabled>
+                </div>
+              </div>
+              <div class="field">
+                <label>注册时间</label>
+                <input type="text" id="piCreateTime" disabled>
+              </div>
+              <div class="pf-tip" id="pfMuteTip" style="display:none"></div>
+              <button type="submit" class="btn btn-primary" id="pfSaveBtn" style="padding:11px 28px">保存资料</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ============ 右：修改密码 ============ -->
+        <div class="card" id="password">
+          <div class="card-head">
+            <h3>修改密码</h3>
+            <span class="text-xs text-light">改完会自动退出，需用新密码重新登录</span>
+          </div>
+          <div class="card-body">
+            <div class="pf-tip">修改密码需要先验证原密码；为安全起见，改完后所有页面都需要重新登录。</div>
+            <form onsubmit="pfChangePassword(event)">
+              <div class="field"><label>原密码</label>
+                <input type="password" id="pfOldPwd" autocomplete="current-password" required></div>
+              <div class="field"><label>新密码</label>
+                <input type="password" id="pfNewPwd" placeholder="至少 6 位" autocomplete="new-password" required></div>
+              <div class="field"><label>确认新密码</label>
+                <input type="password" id="pfNewPwd2" autocomplete="new-password" required></div>
+              <div class="pwd-strength" id="pwdStrength" style="display:none">
+                <div class="ps-bar"><i id="psBarFill"></i></div><span id="psText"></span>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" style="padding:11px" id="pfPwdBtn">确认修改</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/profile.js?v=20261019a"></script>
+</body>
+</html>

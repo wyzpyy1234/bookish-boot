@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>通知公告 · Bookish</title>
+<link rel="stylesheet" href="css/style.css?v=20261019a">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="content">
+
+      <div class="card mb-16">
+        <div class="card-body" style="padding:14px 16px">
+          <div class="search-row">
+            <div class="search-wrap">
+              <span class="s-ico">🔍</span>
+              <input type="text" id="aKeyword" placeholder="搜索公告标题或内容…"
+                     oninput="onKeywordInput()" onkeydown="onKeywordKey(event)" autocomplete="off">
+              <button type="button" class="s-clear" id="aClear" title="清空" onclick="clearKeyword()">×</button>
+            </div>
+            <span class="chip" id="chipUnread" onclick="toggleUnread()">🔵 只看未读 <b id="unreadNum">0</b></span>
+            <span class="chip" id="chipReadAll" onclick="markAllRead()">✓ 全部标为已读</span>
+          </div>
+          <div class="tabs mt-16" id="typeTabs" style="margin-bottom:0">
+            <button class="active" data-type="" onclick="pickType(this,'')">全部公告</button>
+            <button data-type="notice" onclick="pickType(this,'notice')">📌 通知</button>
+            <button data-type="rule" onclick="pickType(this,'rule')">📜 规则</button>
+            <button data-type="event" onclick="pickType(this,'event')">🎉 活动</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="annList"></div>
+      <div id="pager" class="pager"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ==================== 公告详情抽屉 ==================== -->
+<div class="drawer-mask" id="annDrawerMask" onclick="closeDrawer('annDrawer')"></div>
+<aside class="drawer" id="annDrawer">
+  <div class="drawer-head">
+    <div style="flex:1;min-width:0">
+      <div class="flex-center mb-8" id="annDrawerBadges"></div>
+      <h3 id="annDrawerTitle">公告</h3>
+      <div class="text-xs text-light mt-8" id="annDrawerMeta"></div>
+    </div>
+    <button class="modal-close" onclick="closeDrawer('annDrawer')">×</button>
+  </div>
+  <div class="drawer-body">
+    <div class="ann-content" id="annDrawerContent"></div>
+    <div class="ann-sign" id="annDrawerSign"></div>
+  </div>
+  <div class="drawer-foot flex-between" id="annDrawerFoot">
+    <span class="text-xs text-light" id="annReadInfo">—</span>
+    <span class="flex-center">
+      <span id="annAdminBtns"></span>
+      <button class="btn btn-ghost btn-sm" onclick="closeDrawer('annDrawer')">关闭</button>
+    </span>
+  </div>
+</aside>
+
+<!-- ==================== 发布 / 编辑公告弹窗（管理员） ==================== -->
+<div class="modal-mask" id="annModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 id="annModalTitle">发布公告</h3>
+      <button class="modal-close" onclick="closeModal('annModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>标题 <span class="text-light">（最多 120 字）</span></label>
+        <input type="text" id="anTitle" maxlength="120" placeholder="例如：国庆假期开放时间调整">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>类型</label>
+          <select id="anType">
+            <option value="notice">📌 通知</option>
+            <option value="rule">📜 规则</option>
+            <option value="event">🎉 活动</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>状态</label>
+          <select id="anStatus">
+            <option value="1">已发布（读者可见）</option>
+            <option value="0">下架（读者不可见）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="checkbox" style="font-weight:600;color:var(--text-2)">
+          <input type="checkbox" id="anTop"> 置顶显示
+        </label>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>正文</label>
+        <textarea id="anContent" style="min-height:220px" placeholder="支持换行，请把时间、地点、规则写清楚"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="spacer text-sm text-light">发布后所有读者都会看到，未读的会在侧边栏显示红点</span>
+      <button class="btn btn-ghost" onclick="closeModal('annModal')">取消</button>
+      <button class="btn btn-primary" id="anSubmit" onclick="submitAnn()">发布</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/announce.js?v=20261019a"></script>
+</body>
+</html>

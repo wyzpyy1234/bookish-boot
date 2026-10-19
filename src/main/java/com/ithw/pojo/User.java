@@ -19,5 +19,8 @@ public class User {
     private String role;
     private Integer maxBorrow;
     private LocalDateTime createTime;
+    private Integer status;
+    private LocalDateTime muteUntil;
+    private String muteReason;
 
 }

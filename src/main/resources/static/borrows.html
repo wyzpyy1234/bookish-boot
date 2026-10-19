@@ -5,178 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>我的借阅 · Bookish</title>
-<link rel="stylesheet" href="css/style.css?v=20261014b">
+<link rel="stylesheet" href="css/style.css?v=20261019a">
 </head>
 <body>
 
-<div class="navbar">
-  <div class="brand"><span class="logo-box">📚</span>Bookish</div>
-  <div class="nav-links">
-    <a href="index.html">图书检索</a>
-    <a href="borrows.html" class="active">我的借阅</a>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="content">
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="s-top"><span class="s-label">当前在借</span><span class="s-ico">📖</span></div>
+          <div class="s-value" id="statBorrowing">—</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="s-top"><span class="s-label">已逾期</span><span class="s-ico">⏰</span></div>
+          <div class="s-value" id="statOverdue">—</div>
+        </div>
+        <div class="stat-card success">
+          <div class="s-top"><span class="s-label">已归还</span><span class="s-ico">✅</span></div>
+          <div class="s-value" id="statReturned">—</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="s-top"><span class="s-label">待缴罚款</span><span class="s-ico">💰</span></div>
+          <div class="s-value" id="statFine">—</div>
+        </div>
+      </div>
+
+      <div class="tabs mt-24" id="statusTabs">
+        <button class="active" data-st="" onclick="pickStatus(this, '')">全部记录</button>
+        <button data-st="borrowed" onclick="pickStatus(this, 'borrowed')">在借中</button>
+        <button data-st="overdue" onclick="pickStatus(this, 'overdue')">已逾期</button>
+        <button data-st="returned" onclick="pickStatus(this, 'returned')">已归还</button>
+      </div>
+
+      <div id="borrowList" class="borrow-list"></div>
+      <div id="pager" class="pager"></div>
+
+    </main>
   </div>
-  <div class="nav-user" id="userBox"></div>
 </div>
 
-<div class="container">
-
-  <div class="section-title"><span class="bar"></span>我的借阅概览</div>
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="s-label">当前在借</div>
-      <div class="s-value" id="statBorrowing">—</div>
-    </div>
-    <div class="stat-card danger">
-      <div class="s-label">已逾期</div>
-      <div class="s-value" id="statOverdue">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="s-label">已归还</div>
-      <div class="s-value" id="statReturned">—</div>
-    </div>
-    <div class="stat-card accent">
-      <div class="s-label">待缴罚款</div>
-      <div class="s-value" id="statFine">—</div>
-    </div>
-  </div>
-
-  <div class="section-title"><span class="bar"></span>借阅记录</div>
-
-  <div class="tabs" id="statusTabs">
-    <button class="active" data-st="" onclick="pickStatus(this, '')">全部</button>
-    <button data-st="borrowed" onclick="pickStatus(this, 'borrowed')">在借中</button>
-    <button data-st="overdue" onclick="pickStatus(this, 'overdue')">已逾期</button>
-    <button data-st="returned" onclick="pickStatus(this, 'returned')">已归还</button>
-  </div>
-
-  <div id="borrowList"></div>
-  <div id="pager" class="pager"></div>
-
-</div>
-
-<script src="js/api.js?v=20261014b"></script>
-<script>
-  window.PAGE_ROLE = "reader";
-
-  var me = requireLogin("reader");
-  var state = { status: "", page: 1, size: 10 };
-
-  function safeInit() {
-    if (!me) return;
-    renderUserChip("userBox", me);
-    loadSummary();
-    loadBorrows(1);
-  }
-
-  async function loadSummary() {
-    try {
-      var s = await request("GET", "/api/borrows/summary");
-      /* 新读者一条借阅记录都没有时，后端 SUM 出来是 null → 这里兜底成 0，避免显示「null 本」 */
-      document.getElementById("statBorrowing").textContent = (s.borrowing || 0) + " 本";
-      document.getElementById("statOverdue").textContent = (s.overdue || 0) + " 本";
-      document.getElementById("statReturned").textContent = (s.returned || 0) + " 本";
-      document.getElementById("statFine").textContent = money(s.unpaidFine || 0);
-    } catch (e) { /* 忽略 */ }
-  }
-
-  function pickStatus(el, st) {
-    state.status = st;
-    var tabs = document.querySelectorAll("#statusTabs button");
-    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-    el.classList.add("active");
-    loadBorrows(1);
-  }
-
-  async function loadBorrows(page) {
-    state.page = page;
-    var box = document.getElementById("borrowList");
-    box.innerHTML = '<div class="loading-tip">加载中…</div>';
-
-    try {
-      var qs = "?page=" + page + "&size=" + state.size;
-      if (state.status) qs += "&status=" + state.status;
-
-      var res = await request("GET", "/api/borrows" + qs);
-      renderBorrows(res.list || []);
-      renderPager("pager", res, function (p) { loadBorrows(p); });
-    } catch (e) {
-      box.innerHTML = '<div class="empty-tip">' + escapeHtml(e.message) + "</div>";
-    }
-  }
-
-  function statusTag(r) {
-    if (r.status === "returned") return '<span class="status-tag returned">已归还</span>';
-    if (r.overdue) return '<span class="status-tag overdue">逾期 ' + r.overdueDays + " 天</span>";
-    return '<span class="status-tag borrowed">在借中</span>';
-  }
-
-  function renderBorrows(list) {
-    var box = document.getElementById("borrowList");
-    if (!list.length) {
-      box.innerHTML = '<div class="empty-tip"><div class="big">📖</div>暂无借阅记录，去<a href="index.html" style="color:var(--primary)">图书检索</a>借一本吧</div>';
-      return;
-    }
-
-    box.innerHTML = list.map(function (r) {
-      var cls = r.overdue ? "overdue" : (r.status === "returned" ? "returned" : "");
-      var canReturn = r.status === "borrowed";
-      var canRenew = r.status === "borrowed" && !r.overdue && r.renewCount < 2;
-
-      return '<div class="borrow-card ' + cls + '">' +
-        '<div class="borrow-head">' +
-          '<span class="b-title">' + escapeHtml(r.bookTitle) + "</span>" +
-          statusTag(r) +
-          '<span class="tag">' + escapeHtml(r.categoryName || "未分类") + "</span>" +
-          '<span class="spacer"></span>' +
-          (canRenew ? '<button class="btn btn-ghost btn-sm" onclick="doRenew(' + r.id + ', this)">续借</button>' : "") +
-          (canReturn ? '<button class="btn btn-success btn-sm" onclick="doReturn(' + r.id + ', this)">归还</button>' : "") +
-        "</div>" +
-        '<div class="text-sub text-sm" style="margin-bottom:9px">' +
-          escapeHtml(r.bookAuthor || "") + ' · 条码 <span class="mono">' + escapeHtml(r.barcode || "—") + "</span>" +
-        "</div>" +
-        '<div class="borrow-meta">' +
-          "<div>借出：<b>" + fmtTime(r.borrowDate) + "</b></div>" +
-          "<div>应还：<b style=\"" + (r.overdue ? "color:var(--danger)" : "") + "\">" + fmtTime(r.dueDate) + "</b></div>" +
-          "<div>归还：" + (r.returnDate ? "<b>" + fmtTime(r.returnDate) + "</b>" : "—") + "</div>" +
-          "<div>续借：<b>" + (r.renewCount || 0) + " / 2 次</b></div>" +
-          "<div>记录号：<b>#" + r.id + "</b></div>" +
-        "</div>" +
-      "</div>";
-    }).join("");
-  }
-
-  async function doReturn(id, btn) {
-    if (!confirm("确认归还这本书吗？逾期会产生罚款。")) return;
-    btn.disabled = true;
-    try {
-      var res = await request("PUT", "/api/borrows/" + id + "/return");
-      if (res && res.overdueDays > 0) {
-        showToast("已归还，逾期 " + res.overdueDays + " 天，罚款 " + money(res.fineAmount), "warn");
-      } else {
-        showToast("归还成功，感谢按时还书！", "ok");
-      }
-      loadBorrows(state.page);
-      loadSummary();
-    } catch (e) {
-      showToast(e.message, "err");
-      btn.disabled = false;
-    }
-  }
-
-  async function doRenew(id, btn) {
-    btn.disabled = true;
-    try {
-      var res = await request("PUT", "/api/borrows/" + id + "/renew");
-      showToast("续借成功，新应还日期 " + fmtDate(res.newDueDate), "ok");
-      loadBorrows(state.page);
-      loadSummary();
-    } catch (e) {
-      showToast(e.message, "err");
-      btn.disabled = false;
-    }
-  }
-
-  safeInit();
-</script>
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/borrows.js?v=20261019a"></script>
 </body>
 </html>

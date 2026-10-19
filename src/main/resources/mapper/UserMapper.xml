@@ -4,9 +4,58 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <!-- namespace 写你UserDao接口全类名 -->
 <mapper namespace="com.ithw.dao.UserDao">
+    <sql id="forumListBody">
+        from forum_post fp
+        join users u on fp.user_id=u.id
+        <where>
+            <choose>
+                <when test="isAdmin">
+                    and fp.status = #{dto.status}
+                </when>
+                <otherwise>
+                    and (fp.status=1 or(fp.user_id=#{id} and fp.status in (0,2)))
+                </otherwise>
+            </choose>
+            <if test="dto.keyword!=null and dto.keyword!=''" >
+                and(fp.title like concat('%',#{dto.keyword},'%') or fp.content like concat('%',#{dto.keyword},'%'))
+            </if>
+            <if test="dto.tag!=null and dto.tag!=''">
+                and(fp.tag=#{dto.tag})
+            </if>
+            <if test="dto.mine!=null and dto.mine">
+                and fp.user_id=#{id}
+            </if>
+            <if test="dto.essenceOnly != null and dto.essenceOnly">
+                AND fp.is_essence = 1
+            </if>
+        </where>
 
+    </sql>
+    <sql id="postDetailsBody">
+        SELECT fp.id,
+        fp.user_id,
+        fp.title,
+        fp.content,
+        fp.tag,
+        fp.is_top,
+        fp.is_essence,
+        fp.is_locked,
+        fp.status,
+        fp.reject_reason,
+        fp.view_count,
+        fp.like_count,
+        fp.comment_count,
+        fp.create_time,
+        fp.last_reply_time,
+        SUBSTRING(fp.content, 1, 80) AS excerpt,
+        u.id AS author_id,
+        u.nickname AS author_name,
+        u.avatar   AS author_avatar,
+        u.role     AS author_role,
+
+    </sql>
     <insert id="register">
-        insert into users (username,password,nickname,phone)values(#{username},#{password},#{nickname},#{phone})
+        insert into users (username,password,nickname,phone,status)values(#{username},#{password},#{nickname},#{phone},1)
     </insert>
 
     <select id="getUserByUserName" resultType="com.ithw.pojo.User">
@@ -30,5 +79,435 @@
 
     <update id="updatePassword">
         update users set password = #{password} where id = #{id}
+    </update>
+
+    <update id="updateProfile">
+        update users set nickname=#{updatePd.nickname},phone=#{updatePd.phone} where id=#{id}
+    </update>
+
+    <select id="forumList" resultType="com.ithw.vo.PostVo">
+        <include refid="postDetailsBody"/>
+        EXISTS(SELECT 1 FROM forum_like l
+        WHERE l.post_id = fp.id AND l.user_id = #{id}) AS liked
+        <include refid="forumListBody"/> ORDER BY fp.is_top DESC,
+        <choose>
+            <when test="dto.sort=='hot'">
+                (fp.view_count + fp.like_count * 3 + fp.comment_count * 5) DESC
+            </when>
+            <when test="dto.sort=='active'">
+                IFNULL(fp.last_reply_time, fp.create_time) DESC
+            </when>
+            <otherwise>
+                fp.create_time DESC
+            </otherwise>
+        </choose>
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="forumListGetTotal" resultType="int">
+        SELECT COUNT(*)
+        <include refid="forumListBody"/>
+    </select>
+
+    <select id="listPostImages" resultType="java.lang.String">
+        SELECT url FROM forum_post_image WHERE post_id = #{postId} ORDER BY sort_no
+    </select>
+
+    <select id="hasReported" resultType="int">
+        SELECT COUNT(*) FROM forum_report
+        WHERE target_type = 'post' AND target_id = #{postId} AND reporter_id = #{userId}
+    </select>
+
+    <insert id="postForum" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into forum_post (user_id,title,content,tag,is_top,is_essence
+        ,is_locked,status,view_count,like_count,comment_count) values
+        (#{userId},#{title},#{content},#{tag},#{isTop},#{isEssence},
+        #{isLocked},#{status},#{viewCount},#{likeCount},#{commentCount})
+    </insert>
+
+    <insert id="postForumImage">
+        insert into forum_post_image (post_id, url, sort_no)
+        values (#{postId}, #{url}, #{sortNo})
+    </insert>
+
+    <select id="postDetails" resultType="com.ithw.vo.PostVo">
+        <include refid="postDetailsBody"/>
+        EXISTS(SELECT 1 FROM forum_like l
+        WHERE l.post_id = fp.id AND l.user_id = #{user.id}) AS liked
+        from forum_post fp
+        join users u on fp.user_id=u.id
+        where fp.id=#{id}
+    </select>
+
+    <update id="updateViewCount">
+        update forum_post set view_count = view_count + 1 where id=#{id}
+    </update>
+    
+    <update id="editForum">
+        update forum_post set title=#{createPostDto.title},content=#{createPostDto.content},tag=#{createPostDto.tag} where id=#{id}
+    </update>
+
+    <delete id="deleteImage">
+        DELETE FROM forum_post_image WHERE post_id = #{id}
+    </delete>
+
+    <update id="updateSR">
+        update forum_post set status=#{status},reject_reason=#{reject} where id=#{id}
+    </update>
+
+    <update id="deleteForum">
+        update forum_post set status=-1 where id=#{id}
+    </update>
+
+    <sql id="commentColumns">
+        fc.id,
+        fc.content,
+        fc.parent_id,
+        fc.user_id,
+        u.nickname  AS user_name,
+        u.avatar    AS user_avatar,
+        u.role      AS user_role,
+        fc.reply_to_user_id,
+        u2.nickname AS reply_to_user_name,
+        fc.create_time
+    </sql>
+
+
+    <select id="getCommentTotal" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM forum_comment
+        WHERE post_id = #{postId}
+        AND parent_id IS NULL
+        AND status = 1
+    </select>
+
+
+    <select id="listRootComments" resultType="com.ithw.vo.CommentVo">
+        SELECT <include refid="commentColumns"/>
+        FROM forum_comment fc
+        JOIN users u       ON u.id  = fc.user_id
+        LEFT JOIN users u2 ON u2.id = fc.reply_to_user_id
+        WHERE fc.post_id = #{postId}
+        AND fc.parent_id IS NULL
+        AND fc.status = 1
+        ORDER BY fc.create_time ASC, fc.id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+
+    <select id="listRepliesByParentIds" resultType="com.ithw.vo.CommentVo">
+        SELECT <include refid="commentColumns"/>
+        FROM forum_comment fc
+        JOIN users u       ON u.id  = fc.user_id
+        LEFT JOIN users u2 ON u2.id = fc.reply_to_user_id
+        WHERE fc.parent_id IN
+        <foreach collection="parentIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+        AND fc.status = 1
+        ORDER BY fc.create_time ASC, fc.id ASC
+    </select>
+
+    <update id="reject">
+        UPDATE forum_post SET status = 2, reject_reason = #{reason} WHERE id = #{id} AND status = 0
+    </update>
+
+    <select id="selectForumCommentById" resultType="com.ithw.pojo.ForumComment">
+        select id,post_id,user_id,parent_id,status from forum_comment where id=#{id}
+    </select>
+
+    <insert id="insertComment" useGeneratedKeys="true" keyProperty="id">
+        insert into forum_comment (post_id, user_id, parent_id, reply_to_user_id, content, status)
+        values (#{postId}, #{userId}, #{parentId}, #{replyToUserId}, #{content}, 1)
+    </insert>
+    
+    <update id="addCommentCount">
+        UPDATE forum_post SET
+        comment_count = comment_count + 1, last_reply_time = NOW() WHERE id = #{postId};
+    </update>
+
+    <select id="countKids" resultType="java.lang.Integer">
+        select count(*) from forum_comment where parent_id = #{id} and status=1
+    </select>
+    
+    <update id="updateComment">
+        UPDATE forum_comment SET status = -1 WHERE id = #{id} OR parent_id = #{id}
+    </update>
+
+    <update id="updateKids">
+        UPDATE forum_post SET comment_count = GREATEST(comment_count - (1 + #{kids}), 0) WHERE id = #{postId};
+    </update>
+
+    <!-- ==================== 7.10 点赞 / 取消点赞 ==================== -->
+    <select id="findLike" resultType="com.ithw.pojo.ForumLike">
+        SELECT id, post_id, user_id FROM forum_like
+        WHERE post_id = #{postId} AND user_id = #{userId}
+    </select>
+
+    <insert id="insertLike">
+        INSERT INTO forum_like (post_id, user_id) VALUES (#{postId}, #{userId})
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM forum_like WHERE post_id = #{postId} AND user_id = #{userId}
+    </delete>
+
+    <update id="incLikeCount">
+        UPDATE forum_post SET like_count = like_count + 1 WHERE id = #{postId}
+    </update>
+
+    <update id="decLikeCount">
+        UPDATE forum_post SET like_count = GREATEST(like_count - 1, 0) WHERE id = #{postId}
+    </update>
+
+    <select id="getLikeCount" resultType="java.lang.Integer">
+        SELECT like_count FROM forum_post WHERE id = #{postId}
+    </select>
+
+    <!-- ==================== 帖子基础查询 / 管理标记 ==================== -->
+    <select id="selectPostById" resultType="com.ithw.pojo.ForumPost">
+        SELECT id, user_id, title, status, is_locked, like_count
+        FROM forum_post WHERE id = #{id}
+    </select>
+
+    <update id="updatePostFlags">
+        UPDATE forum_post
+        <set>
+            <if test="dto.isTop != null">is_top = #{dto.isTop},</if>
+            <if test="dto.isEssence != null">is_essence = #{dto.isEssence},</if>
+            <if test="dto.isLocked != null">is_locked = #{dto.isLocked},</if>
+            <if test="dto.status != null">status = #{dto.status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== 7.11 举报 ==================== -->
+    <select id="countReport" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM forum_report
+        WHERE target_type = #{targetType} AND target_id = #{targetId} AND reporter_id = #{userId}
+    </select>
+
+    <insert id="insertReport" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO forum_report (target_type, target_id, reporter_id, reason_type, reason, status)
+        VALUES (#{targetType}, #{targetId}, #{reporterId}, #{reasonType}, #{reason}, 0)
+    </insert>
+
+    <!-- ==================== 7.13 举报列表 ==================== -->
+    <sql id="reportWhere">
+        <where>
+            <if test="dto.status != null">AND r.status = #{dto.status}</if>
+            <if test="dto.targetType != null and dto.targetType != ''">AND r.target_type = #{dto.targetType}</if>
+        </where>
+    </sql>
+
+    <select id="countReports" resultType="int">
+        SELECT COUNT(*) FROM forum_report r
+        <include refid="reportWhere"/>
+    </select>
+
+    <select id="listReports" resultType="com.ithw.vo.ReportVo">
+        SELECT r.id, r.target_type, r.target_id, r.reporter_id,
+        u.nickname AS reporter_name,
+        r.reason_type, r.reason, r.status, r.handle_by, r.handle_time,
+        r.handle_action, r.handle_remark, r.create_time
+        FROM forum_report r
+        JOIN users u ON u.id = r.reporter_id
+        <include refid="reportWhere"/>
+        ORDER BY r.status ASC, r.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="listReportPostTargets" resultType="com.ithw.vo.ReportTargetVo">
+        SELECT p.id,
+        p.title,
+        SUBSTRING(p.content, 1, 80) AS excerpt,
+        p.status,
+        p.user_id AS author_id,
+        u.nickname AS author_name
+        FROM forum_post p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.id IN
+        <foreach collection="ids" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+    </select>
+
+    <select id="listReportCommentTargets" resultType="com.ithw.vo.ReportTargetVo">
+        SELECT c.id,
+        NULL AS title,
+        SUBSTRING(c.content, 1, 80) AS excerpt,
+        c.status,
+        c.user_id AS author_id,
+        u.nickname AS author_name
+        FROM forum_comment c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.id IN
+        <foreach collection="ids" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+    </select>
+
+    <select id="selectReportById" resultType="com.ithw.pojo.ForumReport">
+        SELECT * FROM forum_report WHERE id = #{id}
+    </select>
+
+    <!-- ==================== 7.14 处理举报 ==================== -->
+    <update id="updatePostStatus">
+        UPDATE forum_post SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateCommentStatus">
+        UPDATE forum_comment SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateReportHandle">
+        UPDATE forum_report
+        SET status = #{status}, handle_by = #{handleBy}, handle_time = NOW(),
+            handle_action = #{handleAction}, handle_remark = #{handleRemark}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== 7.15 用户列表 ==================== -->
+    <sql id="userWhere">
+        <where>
+            <if test="dto.keyword != null and dto.keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{dto.keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{dto.keyword}, '%'))
+            </if>
+            <if test="dto.role != null and dto.role != ''">AND u.role = #{dto.role}</if>
+            <if test="dto.status != null">AND u.status = #{dto.status}</if>
+        </where>
+    </sql>
+
+    <select id="countUsers" resultType="int">
+        SELECT COUNT(*) FROM users u
+        <include refid="userWhere"/>
+    </select>
+
+    <select id="listUsers" resultType="com.ithw.vo.UserAdminVo">
+        SELECT u.id, u.username, u.nickname, u.phone, u.avatar, u.role, u.max_borrow, u.create_time,
+        u.status, u.mute_until, u.mute_reason,
+        (SELECT COUNT(*) FROM forum_post p WHERE p.user_id = u.id AND p.status = 1) AS post_count,
+        (SELECT COUNT(*) FROM forum_comment c WHERE c.user_id = u.id AND c.status = 1) AS comment_count,
+        (SELECT COUNT(*) FROM borrow_record b WHERE b.reader_id = u.id AND b.status = 'borrowed') AS borrowing_count
+        FROM users u
+        <include refid="userWhere"/>
+        ORDER BY u.id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- ==================== 7.16 / 7.17 禁言 ==================== -->
+    <update id="muteUser">
+        UPDATE users SET status = 0,
+        mute_until = CASE WHEN #{days} IS NULL OR #{days} = 0 THEN NULL
+        ELSE DATE_ADD(NOW(), INTERVAL #{days} DAY) END,
+        mute_reason = #{reason}
+        WHERE id = #{id}
+    </update>
+
+    <update id="unmuteUser">
+        UPDATE users SET status = 1, mute_until = NULL, mute_reason = NULL WHERE id = #{id}
+    </update>
+
+    <!-- ==================== 7.18 审核通过 ==================== -->
+    <update id="approvePost">
+        UPDATE forum_post SET status = 1, reject_reason = NULL WHERE id = #{id} AND status = 0
+    </update>
+
+    <!-- ==================== 8.x 公告 ==================== -->
+    <sql id="annWhere">
+        <where>
+            <choose>
+                <when test="isAdmin">AND a.status != -1</when>
+                <otherwise>AND a.status = 1</otherwise>
+            </choose>
+            <if test="dto.keyword != null and dto.keyword != ''">
+                AND (a.title LIKE CONCAT('%', #{dto.keyword}, '%')
+                OR a.content LIKE CONCAT('%', #{dto.keyword}, '%'))
+            </if>
+            <if test="dto.type != null and dto.type != ''">AND a.type = #{dto.type}</if>
+            <if test="dto.onlyUnread != null and dto.onlyUnread">
+                AND NOT EXISTS (SELECT 1 FROM announcement_read r
+                WHERE r.announcement_id = a.id AND r.user_id = #{me})
+            </if>
+        </where>
+    </sql>
+
+    <select id="countAnnouncements" resultType="int">
+        SELECT COUNT(*) FROM announcement a
+        <include refid="annWhere"/>
+    </select>
+
+    <select id="listAnnouncements" resultType="com.ithw.vo.AnnouncementVo">
+        SELECT a.id, a.admin_id, u.nickname AS admin_name, a.title, a.content, a.type,
+        a.is_top, a.status, a.publish_time, a.update_time,
+        SUBSTRING(a.content, 1, 80) AS excerpt,
+        (SELECT COUNT(*) FROM announcement_read r2 WHERE r2.announcement_id = a.id) AS read_count,
+        EXISTS(SELECT 1 FROM announcement_read r3
+        WHERE r3.announcement_id = a.id AND r3.user_id = #{me}) AS is_read
+        FROM announcement a
+        JOIN users u ON u.id = a.admin_id
+        <include refid="annWhere"/>
+        ORDER BY a.is_top DESC, a.publish_time DESC, a.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="getAnnouncement" resultType="com.ithw.vo.AnnouncementVo">
+        SELECT a.id, a.admin_id, u.nickname AS admin_name, a.title, a.content, a.type,
+        a.is_top, a.status, a.publish_time, a.update_time,
+        SUBSTRING(a.content, 1, 80) AS excerpt,
+        (SELECT COUNT(*) FROM announcement_read r2 WHERE r2.announcement_id = a.id) AS read_count,
+        EXISTS(SELECT 1 FROM announcement_read r3
+        WHERE r3.announcement_id = a.id AND r3.user_id = #{me}) AS is_read
+        FROM announcement a
+        JOIN users u ON u.id = a.admin_id
+        WHERE a.id = #{id} AND a.status != -1
+    </select>
+
+    <select id="selectAnnouncementById" resultType="com.ithw.pojo.Announcement">
+        SELECT id, admin_id, title, content, type, is_top, status, publish_time, update_time
+        FROM announcement WHERE id = #{id}
+    </select>
+
+    <insert id="markRead">
+        INSERT INTO announcement_read (announcement_id, user_id, read_time)
+        VALUES (#{id}, #{me}, NOW())
+        ON DUPLICATE KEY UPDATE read_time = read_time
+    </insert>
+
+    <insert id="markAllRead">
+        INSERT INTO announcement_read (announcement_id, user_id, read_time)
+        SELECT a.id, #{me}, NOW()
+        FROM announcement a
+        LEFT JOIN announcement_read r
+        ON r.announcement_id = a.id AND r.user_id = #{me}
+        WHERE a.status = 1 AND r.id IS NULL
+    </insert>
+
+    <select id="unreadCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM announcement a
+        LEFT JOIN announcement_read r ON r.announcement_id = a.id AND r.user_id = #{me}
+        WHERE a.status = 1 AND r.id IS NULL
+    </select>
+
+    <insert id="insertAnnouncement" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO announcement (admin_id, title, content, type, is_top, status, publish_time)
+        VALUES (#{adminId}, #{title}, #{content}, #{type}, #{isTop}, #{status}, #{publishTime})
+    </insert>
+
+    <update id="updateAnnouncement">
+        UPDATE announcement
+        <set>
+            <if test="dto.title != null">title = #{dto.title},</if>
+            <if test="dto.content != null">content = #{dto.content},</if>
+            <if test="dto.type != null">type = #{dto.type},</if>
+            <if test="dto.isTop != null">is_top = #{dto.isTop},</if>
+            <if test="dto.status != null">status = #{dto.status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteAnnouncement">
+        UPDATE announcement SET status = -1 WHERE id = #{id}
     </update>
 </mapper>

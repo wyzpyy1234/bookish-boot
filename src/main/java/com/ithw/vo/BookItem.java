@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 @AllArgsConstructor
@@ -20,7 +21,7 @@ public class BookItem{
     private Integer publisherId;
     private String publisherName;
     private BigDecimal price;
-    private LocalDateTime publishDate;
+    private Date publishDate;
     private String intro;
     private String cover;
     private Integer totalCopies;

@@ -5,101 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>图书检索 · Bookish</title>
-<link rel="stylesheet" href="css/style.css?v=20261014b">
+<link rel="stylesheet" href="css/style.css?v=20261019a">
 </head>
 <body>
 
-<!-- ============ 导航栏 ============ -->
-<div class="navbar">
-  <div class="brand"><span class="logo-box">📚</span>Bookish</div>
-  <div class="nav-links">
-    <a href="index.html" class="active">图书检索</a>
-    <a href="borrows.html">我的借阅</a>
-  </div>
-  <div class="nav-user" id="userBox"></div>
-</div>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
 
-<div class="container">
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
 
-  <!-- ============ 我的借阅概览 ============ -->
-  <div class="section-title"><span class="bar"></span>我的借阅概览</div>
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="s-label">当前在借</div>
-      <div class="s-value" id="statBorrowing">—</div>
-    </div>
-    <div class="stat-card danger">
-      <div class="s-label">已逾期</div>
-      <div class="s-value" id="statOverdue">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="s-label">可借上限</div>
-      <div class="s-value" id="statMax">—</div>
-    </div>
-    <div class="stat-card accent">
-      <div class="s-label">待缴罚款</div>
-      <div class="s-value" id="statFine">—</div>
-    </div>
-  </div>
+    <main class="content">
 
-  <!-- ============ 热门借阅 TOP10 ============ -->
-  <div class="section-title">
-    <span class="bar"></span>热门借阅 TOP10
-    <span class="sub hot-hint">自动轮播 · 悬停暂停</span>
-    <span class="seg" id="hotToggle">
-      <button type="button" class="seg-btn" data-mode="carousel" onclick="setHotMode('carousel')">轮换</button>
-      <button type="button" class="seg-btn" data-mode="grid" onclick="setHotMode('grid')">平铺</button>
-    </span>
-  </div>
-  <div class="hot-carousel" id="hotCarousel" onmouseenter="hotPause()" onmouseleave="hotAuto()">
-    <button class="hot-arrow prev" onclick="hotGo(-1)" aria-label="上一组">‹</button>
-    <div class="hot-viewport">
-      <div class="hot-track" id="hotTrack">
-        <div class="hot-placeholder">热门榜加载中…</div>
+      <!-- ============ 我的借阅概览 ============ -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="s-top"><span class="s-label">当前在借</span><span class="s-ico">📖</span></div>
+          <div class="s-value" id="statBorrowing">—</div>
+          <div class="s-foot">可借上限 <b id="statMax">—</b></div>
+        </div>
+        <div class="stat-card danger">
+          <div class="s-top"><span class="s-label">已逾期</span><span class="s-ico">⏰</span></div>
+          <div class="s-value" id="statOverdue">—</div>
+          <div class="s-foot">逾期后无法续借</div>
+        </div>
+        <div class="stat-card success">
+          <div class="s-top"><span class="s-label">已归还</span><span class="s-ico">✅</span></div>
+          <div class="s-value" id="statReturned">—</div>
+          <div class="s-foot">历史累计</div>
+        </div>
+        <div class="stat-card accent">
+          <div class="s-top"><span class="s-label">待缴罚款</span><span class="s-ico">💰</span></div>
+          <div class="s-value" id="statFine">—</div>
+          <div class="s-foot">0.5 元/天，单本上限 20 元</div>
+        </div>
       </div>
-    </div>
-    <button class="hot-arrow next" onclick="hotGo(1)" aria-label="下一组">›</button>
-    <div class="hot-dots" id="hotDots"></div>
-  </div>
 
-  <!-- ============ 筛选栏 ============ -->
-  <div class="section-title"><span class="bar"></span>图书检索</div>
-  <div class="filter-bar">
-    <div class="search-row">
-      <div class="kw-wrap">
-        <input type="text" id="keyword" placeholder="输入书名或作者，边打边搜（回车立即搜索）"
-               oninput="onKeywordInput()" onkeydown="onKeywordKey(event)" autocomplete="off">
-        <button type="button" class="kw-clear" id="kwClear" title="清空" onclick="clearKeyword()">×</button>
+      <!-- ============ 热门借阅 TOP10 ============ -->
+      <div class="section-title">
+        <span class="bar"></span>热门借阅 TOP10
+        <span class="sub hot-hint">自动轮播 · 悬停暂停</span>
+        <span class="spacer"></span>
+        <span class="seg" id="hotToggle">
+          <button type="button" class="seg-btn" data-mode="carousel" onclick="setHotMode('carousel')">轮换</button>
+          <button type="button" class="seg-btn" data-mode="grid" onclick="setHotMode('grid')">平铺</button>
+        </span>
       </div>
-      <select id="sortSel" onchange="applyFilter()">
-        <option value="newest">最新上架</option>
-        <option value="hot">最多借阅</option>
-        <option value="priceAsc">价格从低到高</option>
-        <option value="priceDesc">价格从高到低</option>
-      </select>
-      <button class="btn btn-primary" onclick="applyFilter()">搜索</button>
-      <span class="search-status" id="searchStatus"></span>
-    </div>
-    <div class="chips" id="categoryChips"></div>
-    <div class="chips" style="margin-top:10px">
-      <span class="chip-label">出版社</span>
-      <select id="pubSel" onchange="applyFilter()" style="padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--card);cursor:pointer">
-        <option value="">全部出版社</option>
-      </select>
-      <span class="chip" id="chipAvailable" onclick="toggleAvailable()">只看可借</span>
-      <span class="chip" onclick="resetFilter()">重置</span>
-    </div>
+      <div class="hot-carousel" id="hotCarousel">
+        <button class="hot-arrow prev" onclick="hotGo(-1); hotAuto()" aria-label="上一组">‹</button>
+        <div class="hot-viewport" id="hotViewport">
+          <div class="hot-track" id="hotTrack">
+            <div class="hot-placeholder">热门榜加载中…</div>
+          </div>
+        </div>
+        <button class="hot-arrow next" onclick="hotGo(1); hotAuto()" aria-label="下一组">›</button>
+        <div class="hot-dots" id="hotDots"></div>
+      </div>
+
+      <!-- ============ 图书检索 ============ -->
+      <div class="section-title">
+        <span class="bar"></span>图书检索
+        <span class="sub">支持书名 / 作者关键词，边打边搜</span>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-row">
+          <div class="search-wrap">
+            <span class="s-ico">🔍</span>
+            <input type="text" id="keyword" placeholder="输入书名或作者，边打边搜（回车立即搜索）"
+                   oninput="onKeywordInput()" onkeydown="onKeywordKey(event)" autocomplete="off">
+            <button type="button" class="s-clear" id="kwClear" title="清空" onclick="clearKeyword()">×</button>
+          </div>
+          <select id="sortSel" onchange="applyFilter()" style="width:auto;min-width:132px">
+            <option value="newest">最新上架</option>
+            <option value="hot">最多借阅</option>
+            <option value="priceAsc">价格从低到高</option>
+            <option value="priceDesc">价格从高到低</option>
+          </select>
+          <select id="pubSel" onchange="applyFilter()" style="width:auto;min-width:150px">
+            <option value="">全部出版社</option>
+          </select>
+          <button class="btn btn-primary" onclick="applyFilter()">搜索</button>
+          <span class="search-status" id="searchStatus"></span>
+        </div>
+        <div class="chips mt-16" id="categoryChips"></div>
+        <div class="chips mt-8">
+          <span class="chip" id="chipAvailable" onclick="toggleAvailable()">✅ 只看可借</span>
+          <span class="chip" onclick="resetFilter()">↺ 重置条件</span>
+        </div>
+      </div>
+
+      <div id="bookGrid" class="book-grid"></div>
+      <div id="pager" class="pager"></div>
+
+    </main>
   </div>
-
-  <!-- ============ 图书网格 ============ -->
-  <div id="bookGrid" class="book-grid"></div>
-  <div id="pager" class="pager"></div>
-
 </div>
 
 <!-- ============ 图书详情弹窗 ============ -->
-<div class="modal-mask" id="detailModal" onclick="if(event.target===this)closeModal('detailModal')">
-  <div class="modal">
+<div class="modal-mask" id="detailModal">
+  <div class="modal modal-lg">
     <div class="modal-head">
       <h3>图书详情</h3>
       <button class="modal-close" onclick="closeModal('detailModal')">×</button>
@@ -112,526 +117,8 @@
   </div>
 </div>
 
-<script src="js/api.js?v=20261014b"></script>
-<script>
-  window.PAGE_ROLE = "reader";
-
-  var me = requireLogin("reader");
-
-  /* ---------- 筛选状态 ---------- */
-  var state = {
-    keyword: "",
-    categoryId: "",
-    publisherId: "",
-    onlyAvailable: false,
-    sort: "newest",
-    page: 1,
-    size: 15          // 宽屏下图书网格是 5 列，3 行刚好铺满一屏
-  };
-
-  var currentBookId = null;   // 详情弹窗里当前的书
-
-  /* 即时检索用到的三个前端专用状态（和后端字段无关） */
-  var reqSeq = 0;         // 请求序号：只认最后发出的那次请求，防止旧结果覆盖新结果
-  var kwTimer = null;     // 输入防抖定时器
-  var composing = false;  // 中文输入法是否正在拼字
-
-  function safeInit() {
-    applyHotMode();
-    restoreFromUrl();             // ① URL 上的检索条件 → state（刷新/分享链接能还原结果）
-    if (!me) return;
-    renderUserChip("userBox", me);
-    syncControls();               // ② state → 输入框/下拉框（分类 chips 要等 ajax 回来再补选中态）
-    loadSummary();
-    loadHot();
-    loadCategories();
-    loadPublishers();
-    loadBooks(state.page || 1);   // ③ 再按还原出的条件发第一次 ajax
-  }
-
-  /* ---------- 热门借阅 TOP10（轮换 / 平铺 两种视图） ---------- */
-  var hotCtl = { timer: null, idx: 0, total: 0, visible: 5, max: 0, step: 0 };
-  var hotResizeTimer = null;
-  var hotMode = "carousel";     // carousel = 卡片轮换（默认）；grid = 原来的平铺网格
-  try {
-    if (localStorage.getItem("bk_hot_mode") === "grid") hotMode = "grid";
-  } catch (e) { /* 隐私模式下 localStorage 可能不可用，忽略 */ }
-
-  async function loadHot() {
-    var track = document.getElementById("hotTrack");
-    applyHotMode();
-    try {
-      var list = await request("GET", "/api/books/hot");
-      if (!list || !list.length) {
-        track.innerHTML = '<div class="hot-placeholder">还没有借阅记录</div>';
-        return;
-      }
-      track.innerHTML = list.map(function (b, i) {
-        return '<div class="hot-card' + (i < 3 ? " top3" : "") + '" onclick="openDetail(' + b.id + ')">' +
-          '<span class="hot-rank">' + (i + 1) + "</span>" +
-          '<div class="hot-title">' + escapeHtml(b.title) + "</div>" +
-          '<div class="hot-sub">' + escapeHtml(b.author) +
-            (b.categoryName ? " · " + escapeHtml(b.categoryName) : "") + "</div>" +
-          '<div class="hot-count">借出 ' + b.borrowCount + " 次</div>" +
-        "</div>";
-      }).join("");
-      hotCtl.idx = 0;
-      hotApply(0);
-      hotAuto();
-    } catch (e) {
-      /* 热门榜加载失败不阻塞检索主流程 */
-      track.innerHTML = '<div class="hot-placeholder">热门榜加载失败：' + escapeHtml(e.message) + "</div>";
-    }
-  }
-
-  /* 把界面切成 hotMode 对应的视图：轮换（轮播）/ 平铺（原来的网格） */
-  function applyHotMode() {
-    var carousel = document.getElementById("hotCarousel");
-    var hint = document.querySelector(".hot-hint");
-    var btns = document.querySelectorAll("#hotToggle .seg-btn");
-    if (!carousel) return;
-
-    carousel.classList.toggle("mode-grid", hotMode === "grid");
-    if (hint) hint.style.display = hotMode === "grid" ? "none" : "";
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle("active", btns[i].getAttribute("data-mode") === hotMode);
-    }
-  }
-
-  function setHotMode(mode) {
-    if (mode === hotMode) return;
-    hotMode = mode;
-    try { localStorage.setItem("bk_hot_mode", mode); } catch (e) { /* 忽略 */ }
-    hotCtl.idx = 0;
-    applyHotMode();
-
-    if (hotMode === "grid") {
-      hotPause();                                        // 平铺不轮播，停掉定时器
-      var track = document.getElementById("hotTrack");
-      if (track) track.style.transform = "";             // 清掉轮播留下的位移
-      var dots = document.getElementById("hotDots");
-      if (dots) dots.innerHTML = "";
-    } else {
-      hotApply(0);
-      hotAuto();
-    }
-  }
-
-  /* 读 CSS 变量算出当前可见张数，并据此推算可滑动的格数 */
-  function hotMeasure() {
-    var carousel = document.getElementById("hotCarousel");
-    var track = document.getElementById("hotTrack");
-    if (!carousel || !track) return false;
-
-    if (hotMode === "grid") {      // 平铺模式不轮播：不用量，顺手让 hotAuto 别启动空转定时器
-      hotCtl.max = 0;
-      hotCtl.step = 0;
-      return false;
-    }
-
-    var v = parseInt(getComputedStyle(carousel).getPropertyValue("--hot-visible"), 10);
-    if (!v || v < 1) v = 5;
-    hotCtl.visible = v;
-
-    var cards = track.querySelectorAll(".hot-card");
-    hotCtl.total = cards.length;
-    hotCtl.max = Math.max(0, hotCtl.total - v);
-    if (hotCtl.idx > hotCtl.max) hotCtl.idx = hotCtl.max;
-
-    /* 第二张卡与第一张的左偏移差 = 卡片宽 + 间距，比读 columnGap 稳 */
-    hotCtl.step = (cards.length > 1) ? (cards[1].offsetLeft - cards[0].offsetLeft) : 0;
-    return true;
-  }
-
-  /* dur 传 0 表示"瞬移"（首次渲染 / 窗口缩放时用，避免抖动） */
-  function hotApply(dur) {
-    if (hotMode === "grid") return;      // 平铺模式由 CSS 网格负责排版
-    if (!hotMeasure()) return;
-    var track = document.getElementById("hotTrack");
-    if (dur === 0) {
-      track.style.transition = "none";
-      track.style.transform = "translateX(" + (-hotCtl.idx * hotCtl.step) + "px)";
-      void track.offsetWidth;              // 强制回流，让上面的 none 立刻生效
-      track.style.transition = "";
-    } else {
-      track.style.transform = "translateX(" + (-hotCtl.idx * hotCtl.step) + "px)";
-    }
-    hotDots();
-  }
-
-  function hotDots() {
-    var html = "";
-    for (var i = 0; i <= hotCtl.max; i++) {
-      html += '<i class="' + (i === hotCtl.idx ? "on" : "") + '" onclick="hotSeek(' + i + ')"></i>';
-    }
-    document.getElementById("hotDots").innerHTML = html;
-  }
-
-  function hotGo(dir) {
-    if (hotMode === "grid" || hotCtl.max <= 0) return;
-    hotCtl.idx += dir;
-    if (hotCtl.idx > hotCtl.max) hotCtl.idx = 0;      // 滑到底了从头轮换
-    if (hotCtl.idx < 0) hotCtl.idx = hotCtl.max;
-    hotApply();
-  }
-
-  function hotSeek(i) {
-    hotCtl.idx = i;
-    hotApply();
-    hotAuto();
-  }
-
-  function hotAuto() {
-    clearInterval(hotCtl.timer);
-    if (hotMode === "grid" || hotCtl.max <= 0) return;
-    hotCtl.timer = setInterval(function () { hotGo(1); }, 3500);
-  }
-
-  function hotPause() { clearInterval(hotCtl.timer); }
-
-  /* 窗口尺寸变化 → 每屏张数、卡片宽度都变了，重新量一次 */
-  window.addEventListener("resize", function () {
-    if (hotMode === "grid" || !document.getElementById("hotTrack")) return;
-    hotApply(0);
-    clearTimeout(hotResizeTimer);
-    hotResizeTimer = setTimeout(function () { hotAuto(); }, 240);
-  });
-
-  /* ---------- 概览 ---------- */
-  async function loadSummary() {
-    try {
-      var s = await request("GET", "/api/borrows/summary");
-      /* 新读者一条借阅记录都没有时，后端 SUM 出来是 null → 这里兜底成 0，避免显示「null 本」 */
-      document.getElementById("statBorrowing").textContent = (s.borrowing || 0) + " 本";
-      document.getElementById("statOverdue").textContent = (s.overdue || 0) + " 本";
-      document.getElementById("statMax").textContent = me.maxBorrow + " 本";
-      document.getElementById("statFine").textContent = money(s.unpaidFine || 0);
-    } catch (e) { /* 概览失败不阻塞主流程 */ }
-  }
-
-  /* ---------- 分类 / 出版社 ---------- */
-  async function loadCategories() {
-    try {
-      var list = await request("GET", "/api/categories");
-      var html = '<span class="chip-label">分类</span>';
-      html += '<span class="chip active" data-cid="" onclick="pickCategory(this, \'\')">全部</span>';
-      list.forEach(function (c) {
-        html += '<span class="chip" data-cid="' + c.id + '" onclick="pickCategory(this, ' + c.id + ')">'
-              + escapeHtml(c.name) + "</span>";
-      });
-      document.getElementById("categoryChips").innerHTML = html;
-      markActiveCategory();     // chips 是 ajax 回来才渲染的，选中态得在这里补
-    } catch (e) { showToast(e.message, "err"); }
-  }
-
-  /* 按 state 给分类 chip 打选中态 */
-  function markActiveCategory() {
-    var chips = document.querySelectorAll("#categoryChips .chip");
-    for (var i = 0; i < chips.length; i++) {
-      var cid = chips[i].getAttribute("data-cid") || "";
-      chips[i].classList.toggle("active", cid === String(state.categoryId));
-    }
-  }
-
-  async function loadPublishers() {
-    try {
-      var list = await request("GET", "/api/publishers");
-      var sel = document.getElementById("pubSel");
-      list.forEach(function (p) {
-        var o = document.createElement("option");
-        o.value = p.id;
-        o.textContent = p.name;
-        sel.appendChild(o);
-      });
-      sel.value = state.publisherId || "";    // 还原 URL 里的出版社条件
-    } catch (e) { /* 忽略 */ }
-  }
-
-  /* 把 state 回填到筛选控件（刷新页面 / 从 URL 还原时保持界面与地址栏一致） */
-  function syncControls() {
-    document.getElementById("keyword").value = state.keyword;
-    document.getElementById("kwClear").style.display = state.keyword ? "flex" : "none";
-    document.getElementById("sortSel").value = state.sort;
-    document.getElementById("pubSel").value = state.publisherId;
-    document.getElementById("chipAvailable").classList.toggle("active", state.onlyAvailable);
-  }
-
-  function pickCategory(el, cid) {
-    state.categoryId = cid === "" ? "" : cid;
-    var chips = document.querySelectorAll("#categoryChips .chip");
-    for (var i = 0; i < chips.length; i++) chips[i].classList.remove("active");
-    el.classList.add("active");
-    applyFilter();
-  }
-
-  function toggleAvailable() {
-    state.onlyAvailable = !state.onlyAvailable;
-    document.getElementById("chipAvailable").classList.toggle("active", state.onlyAvailable);
-    applyFilter();
-  }
-
-  function resetFilter() {
-    clearTimeout(kwTimer);
-    state.keyword = "";
-    state.categoryId = "";
-    state.publisherId = "";
-    state.onlyAvailable = false;
-    state.sort = "newest";
-    syncControls();
-    var chips = document.querySelectorAll("#categoryChips .chip");
-    for (var i = 0; i < chips.length; i++) chips[i].classList.remove("active");
-    if (chips[0]) chips[0].classList.add("active");
-    loadBooks(1);
-  }
-
-  /* ============ 即时检索：防抖 + 输入法 + URL 同步 ============
-   * 这里集中踩掉三个坑：
-   *   ① 每敲一个字就发一次请求 → 打字快时一次检索打十几个 ajax（防抖 300ms 收口）
-   *   ② 中文输入法"拼字"阶段 input 事件也会连续触发 → 打拼音就搜一次（用 composition 状态挡住）
-   *   ③ 请求异步返回顺序不保证，先发的可能后到 → 用 reqSeq 只认最后一次的结果（防竞态）
-   */
-  (function bindKeyword() {
-    var kw = document.getElementById("keyword");
-    if (!kw || !kw.addEventListener) return;
-    kw.addEventListener("compositionstart", function () { composing = true; });
-    kw.addEventListener("compositionend", function () { composing = false; onKeywordInput(); });
-  })();
-
-  function onKeywordInput() {
-    if (composing) return;                       // 拼字中不发请求
-    var v = document.getElementById("keyword").value.trim();
-    document.getElementById("kwClear").style.display = v ? "flex" : "none";
-    clearTimeout(kwTimer);
-    kwTimer = setTimeout(function () {
-      if (v === state.keyword) return;           // 值没变就别白跑一次 ajax
-      state.keyword = v;
-      loadBooks(1);
-    }, 300);
-  }
-
-  function onKeywordKey(e) {
-    if (e.key === "Enter") { clearTimeout(kwTimer); applyFilter(); }   // 回车立刻搜，不等防抖
-    else if (e.key === "Escape") { clearKeyword(); }
-  }
-
-  function clearKeyword() {
-    clearTimeout(kwTimer);
-    document.getElementById("keyword").value = "";
-    document.getElementById("kwClear").style.display = "none";
-    if (state.keyword !== "") { state.keyword = ""; loadBooks(1); }
-    document.getElementById("keyword").focus();
-  }
-
-  function applyFilter() {
-    clearTimeout(kwTimer);
-    state.keyword = document.getElementById("keyword").value.trim();
-    state.sort = document.getElementById("sortSel").value;
-    state.publisherId = document.getElementById("pubSel").value;
-    loadBooks(1);
-  }
-
-  /* 检索条件同步到地址栏（replaceState 不产生历史记录）
-     → 刷新、把链接发给别人，打开的仍是同一批结果 */
-  function syncUrl() {
-    var parts = [];
-    if (state.keyword) parts.push("keyword=" + encodeURIComponent(state.keyword));
-    if (state.categoryId !== "") parts.push("categoryId=" + state.categoryId);
-    if (state.publisherId) parts.push("publisherId=" + state.publisherId);
-    if (state.onlyAvailable) parts.push("onlyAvailable=true");
-    if (state.sort !== "newest") parts.push("sort=" + state.sort);
-    if (state.page > 1) parts.push("page=" + state.page);
-    try {
-      history.replaceState(null, "", location.pathname + (parts.length ? "?" + parts.join("&") : ""));
-    } catch (e) { /* 用 file:// 直接打开时 replaceState 会抛错，忽略 */ }
-  }
-
-  /* 页面加载时从 URL 还原检索条件 */
-  function restoreFromUrl() {
-    var p = null;
-    try { p = new URLSearchParams(location.search); } catch (e) { return; }
-    if (!p) return;
-    if (p.get("keyword")) state.keyword = p.get("keyword");
-    if (p.get("categoryId")) state.categoryId = p.get("categoryId");
-    if (p.get("publisherId")) state.publisherId = p.get("publisherId");
-    if (p.get("onlyAvailable") === "true") state.onlyAvailable = true;
-    if (p.get("sort")) state.sort = p.get("sort");
-    var pg = parseInt(p.get("page"), 10);
-    if (pg > 0) state.page = pg;
-  }
-
-  /* ---------- 图书列表（ajax 局部刷新，不跳页、不整块重绘） ---------- */
-  async function loadBooks(page) {
-    state.page = page;
-    var grid = document.getElementById("bookGrid");
-    var seq = ++reqSeq;                      // 领一个请求号
-
-    /* 已有结果时保留旧卡片只做半透明（配合 CSS 的 .is-busy），首次/空态才铺骨架屏 */
-    if (grid.querySelector(".book-card")) grid.classList.add("is-busy");
-    else grid.innerHTML = skeletonHTML(state.size);
-    setSearchStatus("搜索中…");
-
-    try {
-      var filter = buildQuery();
-      var qs = "?page=" + page + "&size=" + state.size + (filter ? "&" + filter : "");
-
-      var res = await request("GET", "/api/books" + qs);
-      if (seq !== reqSeq) return;            // 已有更新的请求在路上 → 丢弃这次结果
-      renderBooks(res.list || []);
-      renderPager("pager", res, function (p) { loadBooks(p); });
-      setSearchStatus("");
-      syncUrl();
-    } catch (e) {
-      if (seq !== reqSeq) return;
-      grid.classList.remove("is-busy");
-      grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1"><div class="big">⚠</div>' + escapeHtml(e.message) + "</div>";
-      setSearchStatus("");
-    }
-  }
-
-  /* 按当前 state 拼筛选查询串（page / size 由 loadBooks 单独拼） */
-  function buildQuery() {
-    var parts = [];
-    if (state.keyword) parts.push("keyword=" + encodeURIComponent(state.keyword));
-    if (state.categoryId !== "") parts.push("categoryId=" + state.categoryId);
-    if (state.publisherId) parts.push("publisherId=" + state.publisherId);
-    if (state.onlyAvailable) parts.push("onlyAvailable=true");
-    if (state.sort !== "newest") parts.push("sort=" + state.sort);
-    return parts.join("&");
-  }
-
-  function setSearchStatus(txt) {
-    var el = document.getElementById("searchStatus");
-    if (el) el.textContent = txt || "";
-  }
-
-  /* 骨架屏：数量与真实结果一致，数据回来时高度不跳 */
-  function skeletonHTML(n) {
-    var one = '<div class="sk-card"><div class="sk-cover"></div><div class="sk-body">' +
-                '<div class="sk-line w80"></div><div class="sk-line w50"></div>' +
-                '<div class="sk-line w60"></div><div class="sk-line w40"></div>' +
-              "</div></div>";
-    var out = "";
-    for (var i = 0; i < (n || 10); i++) out += one;
-    return out;
-  }
-
-  /* 关键字高亮：必须先 escape 再包 <mark>，顺序反了就是 XSS */
-  function highlight(text, kw) {
-    var safe = escapeHtml(text);
-    if (!kw) return safe;
-    var k = escapeHtml(kw).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    try { return safe.replace(new RegExp("(" + k + ")", "gi"), '<mark class="hl">$1</mark>'); }
-    catch (e) { return safe; }
-  }
-
-  function coverHTML(b) {
-    if (b.cover) {
-      return '<img src="' + escapeHtml(b.cover) + '" alt="" onerror="this.style.display=\'none\'">';
-    }
-    return '<div class="spine">' + escapeHtml(b.title) + "</div>";
-  }
-
-  function renderBooks(list) {
-    var grid = document.getElementById("bookGrid");
-    grid.classList.remove("is-busy");
-    if (!list.length) {
-      var tip = state.keyword
-        ? "没有找到含「" + escapeHtml(state.keyword) + "」的图书，换个词试试"
-        : "没有找到符合条件的图书，换个条件试试";
-      grid.innerHTML = '<div class="empty-tip" style="grid-column:1/-1"><div class="big">🔍</div>' + tip + "</div>";
-      return;
-    }
-    grid.innerHTML = list.map(function (b) {
-      var out = b.availableCopies <= 0;
-      return '<div class="book-card" onclick="openDetail(' + b.id + ')">' +
-        '<div class="book-cover">' + coverHTML(b) + "</div>" +
-        '<div class="book-body">' +
-          '<div class="book-title">' + highlight(b.title, state.keyword) + "</div>" +
-          '<div class="book-author">' + highlight(b.author, state.keyword) + "</div>" +
-          '<div class="book-tags">' +
-            '<span class="tag">' + escapeHtml(b.categoryName || "未分类") + "</span>" +
-            '<span class="tag gray">借出 ' + b.borrowCount + " 次</span>" +
-          "</div>" +
-          '<div class="book-foot">' +
-            '<span class="book-price">' + money(b.price) + "</span>" +
-            '<span class="book-stock ' + (out ? "out" : "") + '">' +
-              (out ? "暂无可借" : "可借 " + b.availableCopies + "/" + b.totalCopies) +
-            "</span>" +
-          "</div>" +
-        "</div>" +
-      "</div>";
-    }).join("");
-  }
-
-  /* ---------- 详情 ---------- */
-  async function openDetail(id) {
-    currentBookId = id;
-    var body = document.getElementById("detailBody");
-    body.innerHTML = '<div class="loading-tip">加载中…</div>';
-    openModal("detailModal");
-
-    try {
-      var b = await request("GET", "/api/books/" + id);
-      var copies = (b.copies || []).map(function (c) {
-        return '<span class="copy-item ' + c.status + '" title="' + escapeHtml(c.location || "") + '">' +
-               escapeHtml(c.barcode) + "</span>";
-      }).join("");
-
-      body.innerHTML =
-        '<div style="display:flex;gap:16px;margin-bottom:16px">' +
-          '<div style="width:96px;height:128px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--primary-light)">' +
-            coverHTML(b) + "</div>" +
-          "<div style=\"flex:1\">" +
-            '<div style="font-size:17px;font-weight:600;line-height:1.4;margin-bottom:4px">' + escapeHtml(b.title) + "</div>" +
-            '<div class="text-sub" style="font-size:13px;margin-bottom:10px">' + escapeHtml(b.author) + "</div>" +
-            '<div class="book-tags">' +
-              '<span class="tag">' + escapeHtml(b.categoryName || "未分类") + "</span>" +
-              '<span class="tag gray">' + escapeHtml(b.publisherName || "未知出版社") + "</span>" +
-            "</div>" +
-            '<div style="font-size:19px;font-weight:600;color:var(--accent)">' + money(b.price) + "</div>" +
-          "</div>" +
-        "</div>" +
-        '<div class="info-row"><span class="k">ISBN</span><span class="v mono">' + escapeHtml(b.isbn) + "</span></div>" +
-        '<div class="info-row"><span class="k">出版日期</span><span class="v">' + fmtDate(b.publishDate) + "</span></div>" +
-        '<div class="info-row"><span class="k">馆藏</span><span class="v">共 ' + b.totalCopies + " 册，可借 " +
-          '<b style="color:' + (b.availableCopies > 0 ? "var(--primary)" : "var(--danger)") + '">' + b.availableCopies + "</b> 册</span></div>" +
-        '<div class="info-row"><span class="k">被借次数</span><span class="v">' + b.borrowCount + " 次</span></div>" +
-        '<div class="info-row"><span class="k">副本</span><span class="v"><div class="copy-list">' + (copies || "—") + "</div></span></div>" +
-        '<div class="info-row"><span class="k">简介</span><span class="v text-sub">' + escapeHtml(b.intro || "暂无简介") + "</span></div>";
-
-      var btn = document.getElementById("btnBorrow");
-      btn.disabled = b.availableCopies <= 0;
-      btn.textContent = b.availableCopies <= 0 ? "暂无可借副本" : "借这本书";
-    } catch (e) {
-      body.innerHTML = '<div class="empty-tip">' + escapeHtml(e.message) + "</div>";
-      document.getElementById("btnBorrow").disabled = true;
-    }
-  }
-
-  async function doBorrow() {
-    if (!currentBookId) return;
-    var btn = document.getElementById("btnBorrow");
-    btn.disabled = true;
-    btn.textContent = "借阅中…";
-    try {
-      var res = await request("POST", "/api/borrows", { bookId: currentBookId });
-      showToast("借阅成功！应还日期 " + fmtDate(res.dueDate), "ok");
-      closeModal("detailModal");
-      loadBooks(state.page);
-      loadSummary();
-    } catch (e) {
-      showToast(e.message, "err");
-      btn.disabled = false;
-      btn.textContent = "借这本书";
-    }
-  }
-
-  /* 从借阅页返回（bfcache 恢复）时重新量一次，避免残留旧宽度 */
-  window.addEventListener("pageshow", function (e) {
-    if (e.persisted) { applyHotMode(); hotCtl.idx = 0; hotApply(0); hotAuto(); }
-  });
-
-  safeInit();
-</script>
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/home.js?v=20261019a"></script>
 </body>
 </html>

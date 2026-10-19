@@ -5,87 +5,222 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <title>管理后台 · Bookish</title>
-<link rel="stylesheet" href="css/style.css?v=20261014b">
+<link rel="stylesheet" href="css/style.css?v=20261019a">
 </head>
 <body>
 
-<div class="navbar">
-  <div class="brand"><span class="logo-box">📚</span>Bookish</div>
-  <div class="nav-links">
-    <a href="admin.html" class="active">管理后台</a>
-  </div>
-  <div class="nav-user" id="userBox"></div>
-</div>
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
 
-<div class="container">
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
 
-  <div class="tabs">
-    <button class="active" onclick="switchPane('stats', this)">统计看板</button>
-    <button onclick="switchPane('books', this)">图书管理</button>
-    <button onclick="switchPane('records', this)">借阅流水</button>
-  </div>
+    <main class="content">
 
-  <!-- ==================== 统计看板 ==================== -->
-  <div id="paneStats">
-    <div class="stat-grid">
-      <div class="stat-card"><div class="s-label">图书种类</div><div class="s-value" id="stBooks">—</div></div>
-      <div class="stat-card"><div class="s-label">馆藏册数</div><div class="s-value" id="stCopies">—</div></div>
-      <div class="stat-card"><div class="s-label">注册读者</div><div class="s-value" id="stReaders">—</div></div>
-      <div class="stat-card"><div class="s-label">当前在借</div><div class="s-value" id="stBorrowing">—</div></div>
-      <div class="stat-card danger"><div class="s-label">逾期未还</div><div class="s-value" id="stOverdue">—</div></div>
-      <div class="stat-card"><div class="s-label">今日借出</div><div class="s-value" id="stToday">—</div></div>
-      <div class="stat-card accent"><div class="s-label">待缴罚款</div><div class="s-value" id="stFine">—</div></div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px" id="chartRow">
-      <div class="card">
-        <div class="section-title" style="margin:0 0 14px"><span class="bar"></span>各分类借阅量</div>
-        <div class="bar-chart" id="catChart"><div class="loading-tip">加载中…</div></div>
+      <div class="tabs">
+        <button class="active" onclick="switchPane('stats', this)">📊 统计看板</button>
+        <button onclick="switchPane('books', this)">📚 图书管理</button>
+        <button onclick="switchPane('records', this)">📋 借阅流水</button>
+        <button onclick="switchPane('community', this)">🛡️ 社区管理 <span class="cnt" id="tabReportCnt">0</span></button>
       </div>
-      <div class="card">
-        <div class="section-title" style="margin:0 0 14px"><span class="bar"></span>月度借出趋势</div>
-        <div class="bar-chart" id="monthChart"><div class="loading-tip">加载中…</div></div>
+
+      <!-- ==================== 统计看板 ==================== -->
+      <div id="paneStats">
+        <div class="stat-grid cols-4">
+          <div class="stat-card">
+            <div class="s-top"><span class="s-label">图书种类</span><span class="s-ico">📚</span></div>
+            <div class="s-value" id="stBooks">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-top"><span class="s-label">馆藏册数</span><span class="s-ico">🗂️</span></div>
+            <div class="s-value" id="stCopies">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-top"><span class="s-label">注册读者</span><span class="s-ico">👥</span></div>
+            <div class="s-value" id="stReaders">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-top"><span class="s-label">当前在借</span><span class="s-ico">📖</span></div>
+            <div class="s-value" id="stBorrowing">—</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="s-top"><span class="s-label">逾期未还</span><span class="s-ico">⏰</span></div>
+            <div class="s-value" id="stOverdue">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-top"><span class="s-label">今日借出</span><span class="s-ico">📈</span></div>
+            <div class="s-value" id="stToday">—</div>
+          </div>
+          <div class="stat-card accent">
+            <div class="s-top"><span class="s-label">待缴罚款</span><span class="s-ico">💰</span></div>
+            <div class="s-value" id="stFine">—</div>
+          </div>
+          <div class="stat-card success">
+            <div class="s-top"><span class="s-label">论坛帖子</span><span class="s-ico">💬</span></div>
+            <div class="s-value" id="stPosts">—</div>
+            <div class="s-foot">待处理举报 <b id="stReports">—</b></div>
+          </div>
+        </div>
+
+        <div class="stat-grid cols-2 mt-16" style="grid-template-columns:1fr 1fr">
+          <div class="card">
+            <div class="card-head"><h3>📊 各分类借阅量</h3></div>
+            <div class="card-body"><div class="bar-chart" id="catChart"><div class="loading-tip">加载中…</div></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>📈 月度借出趋势</h3></div>
+            <div class="card-body"><div class="bar-chart" id="monthChart"><div class="loading-tip">加载中…</div></div></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ==================== 图书管理 ==================== -->
-  <div id="paneBooks" class="hidden">
-    <div class="flex-between mb-16">
-      <div class="text-sub text-sm">共 <b id="bookTotal">0</b> 种图书（含全部出版社）</div>
-      <button class="btn btn-primary" onclick="openBookForm(null)">+ 新增图书</button>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" id="bookTable"></table>
-    </div>
-    <div id="bookPager" class="pager"></div>
-  </div>
-
-  <!-- ==================== 借阅流水 ==================== -->
-  <div id="paneRecords" class="hidden">
-    <div class="filter-bar">
-      <div class="search-row">
-        <input type="text" id="recKeyword" placeholder="搜索读者姓名 / 书名 / 条码…" onkeydown="if(event.key==='Enter')loadRecords(1)">
-        <select id="recStatus" onchange="loadRecords(1)">
-          <option value="">全部状态</option>
-          <option value="borrowed">在借中</option>
-          <option value="overdue">已逾期</option>
-          <option value="returned">已归还</option>
-        </select>
-        <button class="btn btn-primary" onclick="loadRecords(1)">查询</button>
-        <button class="btn btn-ghost" onclick="resetRecords()">重置</button>
+      <!-- ==================== 图书管理 ==================== -->
+      <div id="paneBooks" class="hidden">
+        <div class="flex-between mb-16">
+          <div class="text-sub text-sm">共 <b id="bookTotal">0</b> 种图书（含全部出版社）</div>
+          <button class="btn btn-primary" onclick="openBookForm(null)">＋ 新增图书</button>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="bookTable"></table></div>
+        <div id="bookPager" class="pager"></div>
       </div>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" id="recTable"></table>
-    </div>
-    <div id="recPager" class="pager"></div>
-  </div>
 
+      <!-- ==================== 借阅流水 ==================== -->
+      <div id="paneRecords" class="hidden">
+        <div class="card mb-16">
+          <div class="card-body" style="padding:14px 16px">
+            <div class="search-row">
+              <div class="search-wrap">
+                <span class="s-ico">🔍</span>
+                <input type="text" id="recKeyword" placeholder="搜索读者姓名 / 书名 / 条码…"
+                       onkeydown="if(event.key==='Enter')loadRecords(1)">
+              </div>
+              <select id="recStatus" onchange="loadRecords(1)" style="width:auto;min-width:130px">
+                <option value="">全部状态</option>
+                <option value="borrowed">在借中</option>
+                <option value="overdue">已逾期</option>
+                <option value="returned">已归还</option>
+              </select>
+              <button class="btn btn-primary" onclick="loadRecords(1)">查询</button>
+              <button class="btn btn-ghost" onclick="resetRecords()">重置</button>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="recTable"></table></div>
+        <div id="recPager" class="pager"></div>
+      </div>
+
+      <!-- ==================== 社区管理 ==================== -->
+      <div id="paneCommunity" class="hidden">
+        <div class="seg mb-16" id="cmSeg">
+          <button class="seg-btn active" data-sub="reports" onclick="switchComm('reports')">🚩 举报处理</button>
+          <button class="seg-btn" data-sub="audits" onclick="switchComm('audits')">📝 帖子审核 <span class="cnt" id="tabAuditCnt">0</span></button>
+          <button class="seg-btn" data-sub="users" onclick="switchComm('users')">👥 用户与禁言</button>
+          <button class="seg-btn" data-sub="anns" onclick="switchComm('anns')">📢 公告管理</button>
+        </div>
+
+        <!-- 帖子审核 -->
+        <div id="subAudits" class="hidden">
+          <div class="card mb-16">
+            <div class="card-body" style="padding:14px 16px">
+              <div class="search-row">
+                <select id="auStatus" onchange="loadAudits(1)" style="width:auto;min-width:140px">
+                  <option value="0">待审核</option>
+                  <option value="1">已发布</option>
+                  <option value="2">已驳回</option>
+                </select>
+                <div class="search-wrap">
+                  <span class="s-ico">🔍</span>
+                  <input type="text" id="auKeyword" placeholder="搜索标题或正文…"
+                         onkeydown="if(event.key==='Enter')loadAudits(1)">
+                </div>
+                <button class="btn btn-primary" onclick="loadAudits(1)">查询</button>
+                <button class="btn btn-ghost" onclick="resetAudits()">重置</button>
+              </div>
+              <div class="hint" style="margin-top:8px">
+                普通读者发帖默认「待审核」，只有这里点「通过」后其他人才能看到。
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap"><table class="data-table" id="auditTable"></table></div>
+          <div id="auditPager" class="pager"></div>
+        </div>
+
+        <!-- 举报处理 -->
+        <div id="subReports">
+          <div class="card mb-16">
+            <div class="card-body" style="padding:14px 16px">
+              <div class="search-row">
+                <select id="rpStatus" onchange="loadReports(1)" style="width:auto;min-width:130px">
+                  <option value="0">待处理</option>
+                  <option value="">全部状态</option>
+                  <option value="1">已处理</option>
+                  <option value="2">已驳回</option>
+                </select>
+                <select id="rpTargetType" onchange="loadReports(1)" style="width:auto;min-width:130px">
+                  <option value="">全部类型</option>
+                  <option value="post">帖子</option>
+                  <option value="comment">评论</option>
+                </select>
+                <button class="btn btn-ghost" onclick="loadReports(1)">刷新</button>
+                <span class="spacer" style="flex:1"></span>
+                <span class="text-sub text-sm">点「处理」可隐藏内容 / 删除 / 禁言作者</span>
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap"><table class="data-table" id="reportTable"></table></div>
+          <div id="reportPager" class="pager"></div>
+        </div>
+
+        <!-- 用户与禁言 -->
+        <div id="subUsers" class="hidden">
+          <div class="card mb-16">
+            <div class="card-body" style="padding:14px 16px">
+              <div class="search-row">
+                <div class="search-wrap">
+                  <span class="s-ico">🔍</span>
+                  <input type="text" id="uKeyword" placeholder="搜索账号或昵称…"
+                         onkeydown="if(event.key==='Enter')loadUsers(1)">
+                </div>
+                <select id="uRole" onchange="loadUsers(1)" style="width:auto;min-width:120px">
+                  <option value="">全部角色</option>
+                  <option value="reader">读者</option>
+                  <option value="admin">管理员</option>
+                </select>
+                <select id="uStatus" onchange="loadUsers(1)" style="width:auto;min-width:120px">
+                  <option value="">全部状态</option>
+                  <option value="1">正常</option>
+                  <option value="0">已禁言</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadUsers(1)">查询</button>
+                <button class="btn btn-ghost" onclick="resetUsers()">重置</button>
+              </div>
+              <div class="hint" style="margin-top:8px">
+                禁言后该用户不能发帖 / 评论 / 举报；到期自动失效（后端在发帖、评论时按 mute_until 判断），
+                「解除禁言」是立刻恢复。
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap"><table class="data-table" id="userTable"></table></div>
+          <div id="userPager" class="pager"></div>
+        </div>
+
+        <!-- 公告管理 -->
+        <div id="subAnns" class="hidden">
+          <div class="flex-between mb-16">
+            <div class="text-sub text-sm">共 <b id="annTotal">0</b> 条公告</div>
+            <button class="btn btn-primary" onclick="admOpenAnn(null)">＋ 发布公告</button>
+          </div>
+          <div class="table-wrap"><table class="data-table" id="annTable"></table></div>
+          <div id="annPager" class="pager"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
 </div>
 
 <!-- ==================== 图书新增/编辑弹窗 ==================== -->
-<div class="modal-mask" id="bookModal" onclick="if(event.target===this)closeModal('bookModal')">
+<div class="modal-mask" id="bookModal">
   <div class="modal">
     <div class="modal-head">
       <h3 id="bookModalTitle">新增图书</h3>
@@ -97,39 +232,21 @@
         <input type="text" id="fTitle" placeholder="例如：深入理解计算机系统">
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>作者 *</label>
-          <input type="text" id="fAuthor" placeholder="作者姓名">
-        </div>
-        <div class="field">
-          <label>ISBN *</label>
-          <input type="text" id="fIsbn" placeholder="13 位书号">
-        </div>
+        <div class="field"><label>作者 *</label><input type="text" id="fAuthor" placeholder="作者姓名"></div>
+        <div class="field"><label>ISBN *</label><input type="text" id="fIsbn" placeholder="13 位书号"></div>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>分类 *</label>
-          <select id="fCategory"></select>
-        </div>
-        <div class="field">
-          <label>出版社 *</label>
-          <select id="fPublisher"></select>
-        </div>
+        <div class="field"><label>分类 *</label><select id="fCategory"></select></div>
+        <div class="field"><label>出版社 *</label><select id="fPublisher"></select></div>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>价格（元）*</label>
-          <input type="number" id="fPrice" step="0.01" min="0" placeholder="59.00">
-        </div>
-        <div class="field">
-          <label>出版日期</label>
-          <input type="date" id="fDate">
-        </div>
+        <div class="field"><label>价格（元）*</label><input type="number" id="fPrice" step="0.01" min="0" placeholder="59.00"></div>
+        <div class="field"><label>出版日期</label><input type="date" id="fDate"></div>
       </div>
       <div class="field" id="copyCountField">
         <label>初始副本数 *</label>
         <input type="number" id="fCopyCount" min="1" max="20" value="3">
-        <div class="text-sm text-sub mt-8">同一本书可以有多本实体副本，副本会自动生成唯一条码</div>
+        <div class="hint">同一本书可以有多本实体副本，副本会自动生成唯一条码</div>
       </div>
       <div class="field" style="margin-bottom:0">
         <label>简介</label>
@@ -143,255 +260,148 @@
   </div>
 </div>
 
-<script src="js/api.js?v=20261014b"></script>
-<script>
-  window.PAGE_ROLE = "admin";
+<!-- ==================== 处理举报弹窗 ==================== -->
+<div class="modal-mask" id="dealModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>处理举报</h3>
+      <button class="modal-close" onclick="closeModal('dealModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="dealTarget" class="pf-tip" style="background:var(--surface-3);border-color:var(--border);color:var(--text-2)"></div>
+      <div class="field">
+        <label>处理动作</label>
+        <select id="dealAction" onchange="onDealActionChange()">
+          <option value="reject">驳回举报（内容不动）</option>
+          <option value="hide">隐藏被举报内容</option>
+          <option value="delete">删除被举报内容</option>
+          <option value="mute">隐藏内容 + 禁言作者</option>
+        </select>
+      </div>
+      <div class="field" id="dealDaysField" style="display:none">
+        <label>禁言天数</label>
+        <select id="dealDays">
+          <option value="1">1 天</option>
+          <option value="3" selected>3 天</option>
+          <option value="7">7 天</option>
+          <option value="30">30 天</option>
+          <option value="">永久禁言</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>处理备注（会记进 handle_remark）</label>
+        <input type="text" id="dealRemark" maxlength="200" placeholder="例如：确认是广告">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('dealModal')">取消</button>
+      <button class="btn btn-primary" id="dealSubmit" onclick="submitDeal()">确认处理</button>
+    </div>
+  </div>
+</div>
 
-  var me = requireLogin("admin");
-  var editingId = null;      // null = 新增，有值 = 编辑
-  var bookPage = 1;
-  var categories = [];
-  var publishers = [];
+<!-- ==================== 禁言弹窗 ==================== -->
+<div class="modal-mask" id="muteModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h3 id="muteModalTitle">禁言用户</h3>
+      <button class="modal-close" onclick="closeModal('muteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="muteTarget" class="pf-tip" style="background:var(--danger-50);border-color:var(--danger-100);color:var(--danger)"></div>
+      <div class="field">
+        <label>禁言时长</label>
+        <select id="muteDays">
+          <option value="1">1 天</option>
+          <option value="3" selected>3 天</option>
+          <option value="7">7 天</option>
+          <option value="30">30 天</option>
+          <option value="">永久禁言</option>
+        </select>
+        <div class="hint">禁言期间该用户不能发帖、评论、举报（后端会拦）</div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>禁言原因</label>
+        <input type="text" id="muteReason" maxlength="200" placeholder="例如：发布广告内容">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('muteModal')">取消</button>
+      <button class="btn btn-danger" id="muteSubmit" onclick="submitMute()">确认禁言</button>
+    </div>
+  </div>
+</div>
 
-  function safeInit() {
-    if (!me) return;
-    renderUserChip("userBox", me);
-    loadStats();
-    loadMeta();
-    loadBooks(1);
-  }
+<!-- ==================== 驳回帖子弹窗 ==================== -->
+<div class="modal-mask" id="rejectModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h3>驳回帖子</h3>
+      <button class="modal-close" onclick="closeModal('rejectModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="rejectTarget" class="pf-tip" style="background:var(--danger-50);border-color:var(--danger-100);color:var(--danger)"></div>
+      <div class="field" style="margin-bottom:0">
+        <label>驳回理由（作者能看到）</label>
+        <textarea id="rejectReason" maxlength="200" placeholder="例如：正文只有一句话，请补充具体内容后再发"></textarea>
+        <div class="hint">不填则默认「内容不符合社区规范」。作者可修改后重新提交审核。</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('rejectModal')">取消</button>
+      <button class="btn btn-danger" id="rejectSubmit" onclick="submitReject()">确认驳回</button>
+    </div>
+  </div>
+</div>
 
-  function switchPane(name, el) {
-    var tabs = document.querySelectorAll(".tabs button");
-    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-    el.classList.add("active");
-    document.getElementById("paneStats").classList.toggle("hidden", name !== "stats");
-    document.getElementById("paneBooks").classList.toggle("hidden", name !== "books");
-    document.getElementById("paneRecords").classList.toggle("hidden", name !== "records");
-    if (name === "stats") loadStats();
-    if (name === "books") loadBooks(bookPage);
-    if (name === "records") loadRecords(1);
-  }
+<!-- ==================== 公告发布/编辑弹窗 ==================== -->
+<div class="modal-mask" id="annModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 id="annModalTitle">发布公告</h3>
+      <button class="modal-close" onclick="closeModal('annModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>标题 *</label>
+        <input type="text" id="anTitle" maxlength="120" placeholder="例如：国庆假期开放时间调整">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>类型</label>
+          <select id="anType">
+            <option value="notice">📌 通知</option>
+            <option value="rule">📜 规则</option>
+            <option value="event">🎉 活动</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>状态</label>
+          <select id="anStatus">
+            <option value="1">已发布（读者可见）</option>
+            <option value="0">下架（读者不可见）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="checkbox" style="font-weight:600;color:var(--text-2)">
+          <input type="checkbox" id="anTop"> 置顶显示
+        </label>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>正文 *</label>
+        <textarea id="anContent" style="min-height:200px" placeholder="支持换行，请写清时间、地点、规则"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('annModal')">取消</button>
+      <button class="btn btn-primary" id="anSubmit" onclick="admSubmitAnn()">发布</button>
+    </div>
+  </div>
+</div>
 
-  /* ==================== 统计看板 ==================== */
-  async function loadStats() {
-    try {
-      var s = await request("GET", "/api/admin/stats");
-      document.getElementById("stBooks").textContent = s.bookCount;
-      document.getElementById("stCopies").textContent = s.copyCount;
-      document.getElementById("stReaders").textContent = s.readerCount;
-      document.getElementById("stBorrowing").textContent = s.borrowingCount;
-      document.getElementById("stOverdue").textContent = s.overdueCount;
-      document.getElementById("stToday").textContent = s.todayBorrowCount;
-      document.getElementById("stFine").textContent = money(s.unpaidFineTotal);
-
-      renderBars("catChart", s.categoryStats || [], "categoryName", "borrowCount");
-      renderBars("monthChart", s.monthlyStats || [], "month", "borrowCount");
-    } catch (e) {
-      showToast(e.message, "err");
-    }
-  }
-
-  function renderBars(boxId, list, nameKey, valKey) {
-    var box = document.getElementById(boxId);
-    if (!list.length) { box.innerHTML = '<div class="text-sub text-sm">暂无数据</div>'; return; }
-    var max = Math.max.apply(null, list.map(function (x) { return x[valKey]; })) || 1;
-    box.innerHTML = list.map(function (x) {
-      var pct = Math.round(x[valKey] / max * 100);
-      return '<div class="bar-row">' +
-        '<span class="b-name" title="' + escapeHtml(x[nameKey]) + '">' + escapeHtml(x[nameKey]) + "</span>" +
-        '<span class="b-track"><span class="b-fill" style="width:' + pct + '%"></span></span>' +
-        '<span class="b-val">' + x[valKey] + "</span>" +
-      "</div>";
-    }).join("");
-  }
-
-  /* ==================== 基础数据 ==================== */
-  async function loadMeta() {
-    try { categories = await request("GET", "/api/categories"); } catch (e) { categories = []; }
-    try { publishers = await request("GET", "/api/publishers"); } catch (e) { publishers = []; }
-
-    document.getElementById("fCategory").innerHTML = categories.map(function (c) {
-      return '<option value="' + c.id + '">' + escapeHtml(c.name) + "</option>";
-    }).join("");
-    document.getElementById("fPublisher").innerHTML = publishers.map(function (p) {
-      return '<option value="' + p.id + '">' + escapeHtml(p.name) + "</option>";
-    }).join("");
-  }
-
-  /* ==================== 图书管理 ==================== */
-  async function loadBooks(page) {
-    bookPage = page;
-    var table = document.getElementById("bookTable");
-    table.innerHTML = '<tr><td class="loading-tip">加载中…</td></tr>';
-
-    try {
-      var res = await request("GET", "/api/books?page=" + page + "&size=10&sort=newest");
-      document.getElementById("bookTotal").textContent = res.total;
-
-      table.innerHTML =
-        "<tr><th>ID</th><th>书名 / 作者</th><th>分类</th><th>出版社</th>" +
-        '<th class="t-right">价格</th><th class="t-center">馆藏</th><th class="t-center">被借</th>' +
-        '<th class="t-center">操作</th></tr>' +
-        (res.list || []).map(function (b) {
-          return "<tr>" +
-            "<td>" + b.id + "</td>" +
-            '<td><div style="font-weight:500">' + escapeHtml(b.title) + "</div>" +
-              '<div class="text-sub text-sm">' + escapeHtml(b.author) + "</div></td>" +
-            '<td><span class="tag">' + escapeHtml(b.categoryName || "—") + "</span></td>" +
-            '<td class="text-sm">' + escapeHtml(b.publisherName || "—") + "</td>" +
-            '<td class="t-right">' + money(b.price) + "</td>" +
-            '<td class="t-center">' +
-              '<span style="color:' + (b.availableCopies > 0 ? "var(--primary)" : "var(--danger)") + '">' +
-              b.availableCopies + "</span> / " + b.totalCopies +
-            "</td>" +
-            '<td class="t-center">' + b.borrowCount + "</td>" +
-            '<td class="t-center">' +
-              '<button class="btn btn-ghost btn-sm" onclick="editBook(' + b.id + ')">编辑</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="delBook(' + b.id + ', \'' + escapeHtml(b.title).replace(/'/g, "") + '\')">删除</button>' +
-            "</td>" +
-          "</tr>";
-        }).join("");
-
-      renderPager("bookPager", res, function (p) { loadBooks(p); });
-    } catch (e) {
-      table.innerHTML = '<tr><td class="empty-tip">' + escapeHtml(e.message) + "</td></tr>";
-    }
-  }
-
-  function openBookForm(id) {
-    editingId = id;
-    document.getElementById("bookModalTitle").textContent = id ? "编辑图书" : "新增图书";
-    document.getElementById("copyCountField").classList.toggle("hidden", !!id);
-    document.getElementById("btnSaveBook").textContent = id ? "保存修改" : "确认新增";
-
-    if (!id) {
-      document.getElementById("fTitle").value = "";
-      document.getElementById("fAuthor").value = "";
-      document.getElementById("fIsbn").value = "";
-      document.getElementById("fPrice").value = "";
-      document.getElementById("fDate").value = "";
-      document.getElementById("fIntro").value = "";
-      document.getElementById("fCopyCount").value = 3;
-      if (categories[0]) document.getElementById("fCategory").value = categories[0].id;
-      if (publishers[0]) document.getElementById("fPublisher").value = publishers[0].id;
-    }
-    openModal("bookModal");
-  }
-
-  async function editBook(id) {
-    try {
-      var b = await request("GET", "/api/books/" + id);
-      openBookForm(id);
-      document.getElementById("fTitle").value = b.title || "";
-      document.getElementById("fAuthor").value = b.author || "";
-      document.getElementById("fIsbn").value = b.isbn || "";
-      document.getElementById("fPrice").value = b.price || "";
-      document.getElementById("fDate").value = (b.publishDate || "").slice(0, 10);
-      document.getElementById("fIntro").value = b.intro || "";
-      if (b.categoryId) document.getElementById("fCategory").value = b.categoryId;
-      if (b.publisherId) document.getElementById("fPublisher").value = b.publisherId;
-    } catch (e) { showToast(e.message, "err"); }
-  }
-
-  async function saveBook() {
-    var body = {
-      title: document.getElementById("fTitle").value.trim(),
-      author: document.getElementById("fAuthor").value.trim(),
-      isbn: document.getElementById("fIsbn").value.trim(),
-      categoryId: Number(document.getElementById("fCategory").value),
-      publisherId: Number(document.getElementById("fPublisher").value),
-      price: Number(document.getElementById("fPrice").value),
-      publishDate: document.getElementById("fDate").value || null,
-      intro: document.getElementById("fIntro").value.trim()
-    };
-
-    if (!body.title || !body.author || !body.isbn) { showToast("书名、作者、ISBN 必填", "warn"); return; }
-    if (!(body.price > 0)) { showToast("价格必须大于 0", "warn"); return; }
-    if (!body.categoryId || !body.publisherId) { showToast("请选择分类和出版社", "warn"); return; }
-
-    var btn = document.getElementById("btnSaveBook");
-    btn.disabled = true;
-
-    try {
-      if (editingId) {
-        await request("PUT", "/api/admin/books/" + editingId, body);
-        showToast("修改成功", "ok");
-      } else {
-        body.copyCount = Number(document.getElementById("fCopyCount").value);
-        if (!(body.copyCount >= 1 && body.copyCount <= 20)) { showToast("副本数需在 1~20 之间", "warn"); btn.disabled = false; return; }
-        var res = await request("POST", "/api/admin/books", body);
-        showToast("新增成功，已生成 " + res.copyCount + " 个副本", "ok");
-      }
-      closeModal("bookModal");
-      loadBooks(bookPage);
-    } catch (e) {
-      showToast(e.message, "err");
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  async function delBook(id, title) {
-    if (!confirm("确认删除《" + title + "》吗？\n注意：有借阅记录的图书不允许删除。")) return;
-    try {
-      await request("DELETE", "/api/admin/books/" + id);
-      showToast("已删除", "ok");
-      loadBooks(bookPage);
-    } catch (e) {
-      showToast(e.message, "err");
-    }
-  }
-
-  /* ==================== 借阅流水 ==================== */
-  async function loadRecords(page) {
-    var table = document.getElementById("recTable");
-    table.innerHTML = '<tr><td class="loading-tip">加载中…</td></tr>';
-
-    try {
-      var qs = "?page=" + page + "&size=10";
-      var kw = document.getElementById("recKeyword").value.trim();
-      var st = document.getElementById("recStatus").value;
-      if (kw) qs += "&keyword=" + encodeURIComponent(kw);
-      if (st) qs += "&status=" + st;
-
-      var res = await request("GET", "/api/admin/borrows" + qs);
-
-      table.innerHTML =
-        '<tr><th>记录号</th><th>读者</th><th>书名</th><th>分类</th><th>条码</th>' +
-        '<th>借出时间</th><th>应还时间</th><th>归还时间</th><th class="t-center">状态</th></tr>' +
-        (res.list || []).map(function (r) {
-          var tag = r.status === "returned"
-            ? '<span class="status-tag returned">已归还</span>'
-            : (r.overdue ? '<span class="status-tag overdue">逾期 ' + r.overdueDays + " 天</span>"
-                         : '<span class="status-tag borrowed">在借中</span>');
-          return "<tr>" +
-            "<td>#" + r.id + "</td>" +
-            "<td>" + escapeHtml(r.readerName || "—") + "</td>" +
-            '<td><div style="font-weight:500">' + escapeHtml(r.bookTitle || "—") + "</div>" +
-              '<div class="text-sub text-sm">' + escapeHtml(r.bookAuthor || "") + "</div></td>" +
-            '<td><span class="tag">' + escapeHtml(r.categoryName || "—") + "</span></td>" +
-            '<td class="mono">' + escapeHtml(r.barcode || "—") + "</td>" +
-            '<td class="text-sm">' + fmtTime(r.borrowDate) + "</td>" +
-            '<td class="text-sm">' + fmtTime(r.dueDate) + "</td>" +
-            '<td class="text-sm">' + (r.returnDate ? fmtTime(r.returnDate) : "—") + "</td>" +
-            '<td class="t-center">' + tag + "</td>" +
-          "</tr>";
-        }).join("");
-
-      renderPager("recPager", res, function (p) { loadRecords(p); });
-    } catch (e) {
-      table.innerHTML = '<tr><td class="empty-tip">' + escapeHtml(e.message) + "</td></tr>";
-    }
-  }
-
-  function resetRecords() {
-    document.getElementById("recKeyword").value = "";
-    document.getElementById("recStatus").value = "";
-    loadRecords(1);
-  }
-
-  safeInit();
-</script>
+<script src="js/mock.js?v=20261019a"></script>
+<script src="js/api.js?v=20261019a"></script>
+<script src="js/admin.js?v=20261019a"></script>
 </body>
 </html>

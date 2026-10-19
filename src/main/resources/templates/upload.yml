@@ -1,0 +1,7 @@
+bookish-boot:
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+  forum:
+    dir: ${FORUM_UPLOAD:./forum}
+  announcement:
+    dir: ${ANNOUNCEMENT_UPLOAD:./announcement}
