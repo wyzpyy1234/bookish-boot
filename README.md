@@ -9,14 +9,12 @@
 
 > 这是我在学完 SSM 后，把同一套业务用 Spring Boot 重写一遍的练手项目。早期版本是 Spring + SpringMVC + MyBatis 的 war 包，这个仓库是 Boot 版，接口行为与前端保持一致。
 
----
 
 ## 一、功能
 
 ### 1. 借阅域（读者）
 
 | 功能 | 说明 |
-|---|---|
 | 图书检索 | 按书名 / 作者模糊搜索，按分类、出版社、是否有货筛选，支持价格升降、借阅最多排序与分页 |
 | 图书详情 | 书目信息 + 馆藏副本 + 当前可借数量 + 借阅热度 |
 | 借书 | 一次借一本，受「最大可借数」限制；有逾期未还时不能借；没有可借副本时拦下 |
@@ -28,7 +26,6 @@
 ### 2. 社区域（论坛 + 公告）
 
 | 功能 | 说明 |
-|---|---|
 | 发帖 | 标题 + 正文 + 标签 + 最多 3 张配图；**普通用户发帖进审核队列，管理员发帖免审** |
 | 帖子列表 | 最新 / 最热 / 最近回复三种排序，标签、精华、我的帖子筛选，置顶优先 |
 | 帖子详情 | 浏览数自增、点赞、两级评论、举报 |
@@ -41,7 +38,6 @@
 ### 3. 管理后台
 
 | 模块 | 能力 |
-|---|---|
 | 统计看板 | 图书种类 / 馆藏册数 / 注册读者 / 当前在借 / 逾期 / 今日借出 / 待缴罚款 / 帖子与待办数，分类借阅量与月度趋势图 |
 | 图书管理 | 新增（自动按副本数生成唯一条码）、编辑、删除（有借阅记录禁止删） |
 | 借阅流水 | 按读者 / 书名 / 条码搜索，按状态筛选 |
@@ -50,12 +46,10 @@
 | 用户与禁言 | 搜索用户，禁言（1/3/7/30 天或永久 + 理由）、改时长、解除禁言 |
 | 公告管理 | 发布、编辑、下架、置顶、删除（软删，已读记录保留） |
 
----
 
 ## 二、技术栈
 
 | 层次 | 选型 | 版本 | 说明 |
-|---|---|---|---|
 | 语言 | Java | 17 | |
 | 框架 | Spring Boot | 2.7.18 | 保留 `javax.servlet`，从 SSM 迁移时代码零改动 |
 | 持久层 | MyBatis Starter | 2.3.2 | XML 写 SQL，`map-underscore-to-camel-case` |
@@ -66,7 +60,6 @@
 | 前端 | 原生 HTML/CSS/JS | - | 7 个页面 + 9 个 js 模块，无框架 |
 | 测试 | jsdom 回归脚本 | - | 191 条断言覆盖论坛 / 公告 / 后台交互 |
 
----
 
 ## 三、快速开始
 
@@ -127,24 +120,20 @@ mvn spring-boot:run
 ### 5. 演示账号
 
 | 账号 | 密码 | 角色 | 说明 |
-|---|---|---|---|
 | `admin` | `123456` | 管理员 | 全部后台权限 |
 | `zhangsan` | `123456` | 读者 | 有借阅记录 |
 | `wangwu` | `123456` | 读者 | 第二个读者账号，可用来验证禁言 / 举报流程 |
 
----
 
 ## 四、配置项
 
 | 配置 | 默认值 | 说明 |
-|---|---|---|
 | `server.port` | `8080` | 未显式配置时用 Boot 默认值 |
 | `spring.datasource.password` | `${DB_PASSWORD}` | 必须由环境变量提供 |
 | `spring.servlet.multipart.max-file-size` | `2MB` | 单文件上限 |
 | `spring.servlet.multipart.max-request-size` | `10MB` | 单次请求上限 |
 | `bookish-boot.upload.dir` | `./uploads` | 上传文件落盘目录，通过 `/uploads/**` 对外访问 |
 
----
 
 ## 五、接口设计
 
@@ -168,7 +157,6 @@ mvn spring-boot:run
 ### 错误码分段
 
 | 段 | 范围 | 例子 |
-|---|---|---|
 | 401 / 403 | 登录态 / 权限 | 401 未登录或 token 失效（前端跳登录页）；403 角色不够（普通读者碰管理接口） |
 | 1xxx | 参数 / 用户 | 1001 用户不存在、1003 资源不存在、1004 参数错误 |
 | 2xxx | 借阅 | 2002 超出可借上限、2006 图书有借阅记录不能删、2007 已禁言、2008 帖子已锁定 |
@@ -178,7 +166,6 @@ mvn spring-boot:run
 ### 接口一览（51 个）
 
 | 分组 | 数量 | 主要路径 |
-|---|---|---|
 | 认证与用户 | 9 | `/api/register`、`/api/login`、`/api/logout`、`/api/user/profile`、`/api/user/avatar`、`/api/user/password`、`/api/upload` |
 | 图书与借阅 | 15 | `/api/categories`、`/api/publishers`、`/api/books`、`/api/books/{id}`、`/api/books/hot`、`/api/borrows`、`/api/borrows/{id}/return`、`/api/borrows/{id}/renew`、`/api/admin/books`、`/api/admin/borrows`、`/api/admin/stats` |
 | 论坛 | 11 | `/api/forum/stats`、`/api/forum/posts`、`/api/forum/posts/{id}`、`/api/forum/posts/{id}/comments`、`/api/forum/comments/{id}`、`/api/forum/posts/{id}/like`、`/api/forum/reports` |
@@ -186,14 +173,12 @@ mvn spring-boot:run
 | 公告 | 5 | `/api/announcements`、`/api/announcements/{id}`、`/api/announcements/{id}/read`、`/api/announcements/unread-count`、`/api/announcements/read-all` |
 | 公告管理 | 3 | `POST/PUT/DELETE /api/admin/announcements` |
 
----
 
 ## 六、数据库设计（14 张表）
 
 ### 借阅域
 
 | 表 | 作用 | 关键点 |
-|---|---|---|
 | `users` | 用户（读者 + 管理员） | `role` 区分角色；`status=0` 表示禁言，配合 `mute_until` 懒判断 |
 | `category` / `publisher` | 分类 / 出版社字典 | 名称唯一 |
 | `book` | 书目信息 | ISBN 唯一，**不是可借对象** |
@@ -204,7 +189,6 @@ mvn spring-boot:run
 ### 社区域
 
 | 表 | 作用 | 关键点 |
-|---|---|---|
 | `forum_post` | 帖子 | `status` 0 待审 / 1 已发布 / 2 已驳回 / -1 软删；`reject_reason` 存驳回理由 |
 | `forum_post_image` | 帖子配图 | `post_id + sort_no`，先传图拿 URL 再发帖 |
 | `forum_comment` | 评论 | `parent_id` 做两级；`reply_to_user_id` 由后端反查，不信前端 |
@@ -221,7 +205,6 @@ mvn spring-boot:run
 
 做过 6 组 `EXPLAIN` 实验（联合索引生效、最左前缀、覆盖索引、深分页、`LIKE` 走不走索引、六表 JOIN 的驱动表），把「我的在借书籍」这类查询从全表扫描几千行降到索引定位个位数行，过程记录在 `sql/数据库设计.md` 第八节。
 
----
 
 ## 七、项目结构
 
@@ -245,7 +228,6 @@ bookish-boot
 └── pom.xml
 ```
 
----
 
 ## 八、几个值得说的实现点
 
@@ -275,25 +257,20 @@ bookish-boot
 
 `INSERT INTO announcement_read (...) SELECT ... FROM announcement a LEFT JOIN announcement_read r ON ... AND r.user_id = ? WHERE r.id IS NULL` —— 顺手把已读的过滤掉，不用先查再循环插。
 
----
 
 ## 九、前端说明
 
 页面：`login / index（首页与检索）/ borrows / profile / forum / announcements / admin`。
 
-- `js/api.js` 顶部有开关（本仓库已设为 `false`）：
 
 ```js
-const USE_MOCK = false;  // true = 用 mock.js 假数据离线预览；false = 调真实后端
 ```
 
-本仓库是前后端一体的工程，静态页放在 `src/main/resources/static`，所以默认 `false`，直接对着本项目接口跑。**想不启动后端只看界面**，把它改成 `true`，用 `admin / 123456` 等演示账号登录即可；接后端时记得改回 `false`，否则看到的全是假数据。
 
 - 请求层统一 `request(method, path, body)`，401 自动清登录态跳登录页
 - 上传走 XHR + FormData（不设 `Content-Type`，让浏览器自己带 boundary）
 - 论坛详情用 hash 路由 `#/p/{id}`，刷新不 404
 
----
 
 ## 十、已知限制与后续计划
 
