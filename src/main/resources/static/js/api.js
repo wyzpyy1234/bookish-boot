@@ -655,7 +655,7 @@ function mountShell(meta) {
  *   - 同时广播 bk:poll 事件，当前页面可以自己决定刷新哪块内容
  *   - 标签页切到后台时不发请求（省流量、省额度）；切回来立刻补一次
  * ========================================================== */
-var POLL_INTERVAL = 30000;   /* 想更快可以改小，比如 15000 = 15 秒 */
+var POLL_INTERVAL = 60000;   /* 免费容器 CPU 弱，60 秒一次足够；静默刷新不闪屏，拉长间隔也不影响体验 */
 var _pollTimer = null;
 
 function startPolling() {

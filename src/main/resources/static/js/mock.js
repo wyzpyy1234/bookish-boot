@@ -64,7 +64,7 @@ const MOCK_USERS = [
   { id: 1, username: "admin",    nickname: "图书馆管理员", phone: "13800000000", role: "admin",  maxBorrow: 99, status: 1, muteUntil: null, muteReason: null, createTime: "2026-08-01 09:00:00" },
   { id: 2, username: "zhangsan", nickname: "张三",        phone: "13800000001", role: "reader", maxBorrow: 5,  status: 1, muteUntil: null, muteReason: null, createTime: "2026-08-05 10:20:00" },
   { id: 3, username: "lisi",     nickname: "李四",        phone: "13800000002", role: "reader", maxBorrow: 5,  status: 1, muteUntil: null, muteReason: null, createTime: "2026-08-11 14:30:00" },
-  { id: 4, username: "wangwu",   nickname: "王五",        phone: "13800000003", role: "reader", maxBorrow: 5,  status: 0, muteUntil: "2026-10-20 00:00:00", muteReason: "在论坛发布广告内容", createTime: "2026-08-15 09:10:00" },
+  { id: 4, username: "wangwu",   nickname: "王五",        phone: "13800000003", role: "reader", maxBorrow: 5,  status: 0, muteUntil: "2027-12-31 23:59:59", muteReason: "在论坛发布广告内容", createTime: "2026-08-15 09:10:00" },
   { id: 5, username: "zhaoliu",  nickname: "赵六",        phone: "13800000004", role: "reader", maxBorrow: 5,  status: 1, muteUntil: null, muteReason: null, createTime: "2026-08-20 16:40:00" }
 ];
 

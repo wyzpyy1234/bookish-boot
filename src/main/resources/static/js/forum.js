@@ -211,12 +211,21 @@ function clearKeyword() {
   document.getElementById("fKeyword").focus();
 }
 
-async function loadPosts(page) {
+var _listBusy = false;   /* 静默刷新进行中标记：上一轮没回来就跳过本轮，慢服务器上不堆积请求 */
+
+async function loadPosts(page, opts) {
+  const silent = !!(opts && opts.silent);
+  if (silent && _listBusy) return;
   state.page = page;
   const box = document.getElementById("postList");
   const seq = ++reqSeq;
-  if (box.querySelector(".post-item")) box.classList.add("is-busy");
-  else box.innerHTML = skeletonRows(4);
+
+  /* 遮罩 / 骨架只给「用户主动操作」用；轮询的静默刷新绝不碰它们 */
+  if (!silent) {
+    if (box.querySelector(".post-item")) box.classList.add("is-busy");
+    else box.innerHTML = skeletonRows(4);
+  }
+  _listBusy = true;
 
   try {
     const qs = "?page=" + page + "&size=" + state.size +
@@ -230,13 +239,26 @@ async function loadPosts(page) {
 
     const res = await request("GET", "/api/forum/posts" + qs);
     if (seq !== reqSeq) return;
-    box.classList.remove("is-busy");
-    renderPosts(res.list || []);
-    renderPager("pager", res, function (p) { loadPosts(p); });
+
+    if (!silent) {
+      box.classList.remove("is-busy");
+      box.innerHTML = postsHTML(res.list || [], true);
+      renderPager("pager", res, function (p) { loadPosts(p); });
+    } else {
+      /* 静默刷新：内容没变就一个字节都不动 —— 不闪、不跳、不断交互 */
+      const html = postsHTML(res.list || [], false);
+      if (html !== box.innerHTML) box.innerHTML = html;
+      renderPager("pager", res, function (p) { loadPosts(p); });
+    }
   } catch (e) {
     if (seq !== reqSeq) return;
-    box.classList.remove("is-busy");
-    box.innerHTML = failState(e, "帖子列表");
+    if (!silent) {
+      box.classList.remove("is-busy");
+      box.innerHTML = failState(e, "帖子列表");
+    }
+    /* 静默刷新失败就悄悄放弃：下一轮再试，不打扰用户 */
+  } finally {
+    _listBusy = false;
   }
 }
 
@@ -259,26 +281,25 @@ function postBadges(p) {
   return out;
 }
 
-function renderPosts(list) {
-  const box = document.getElementById("postList");
+/* 列表 HTML 生成（纯函数）：renderPosts 与静默刷新共用，保证比对口径一致 */
+function postsHTML(list, animate) {
   if (!list.length) {
     const desc = state.pending ? (isAdmin ? "没有等待审核的帖子" : "你没有待审核的帖子")
                : state.rejected ? (isAdmin ? "没有被驳回的帖子" : "你没有未通过的帖子")
                : state.mine ? "你还没有发过帖子"
                : (state.essenceOnly ? "还没有精华帖" : "还没有符合条件的帖子");
-    box.innerHTML = emptyState("💬", "这里还没有帖子", desc,
+    return emptyState("💬", "这里还没有帖子", desc,
       muted ? "" : '<button class="btn btn-primary btn-sm" onclick="openCompose()">✏️ 发第一帖</button>');
-    return;
   }
 
-  box.innerHTML = list.map(function (p) {
+  return list.map(function (p) {
     const author = { id: p.authorId, nickname: p.authorName, avatar: p.authorAvatar, role: p.authorRole };
     const thumbs = (p.images || []).slice(0, 3).map(function (u) {
       return '<img src="' + escapeHtml(u) + '" alt="" onclick="event.stopPropagation();openLightbox(\'' +
              escapeHtml(u).replace(/'/g, "") + '\')">';
     }).join("");
 
-    return '<div class="post-item fade-up' + (p.isTop ? " is-top" : "") + (p.isEssence ? " is-essence" : "") +
+    return '<div class="post-item' + (animate ? " fade-up" : "") + (p.isTop ? " is-top" : "") + (p.isEssence ? " is-essence" : "") +
         '" onclick="goDetail(' + p.id + ')">' +
       '<div class="post-head">' +
         avatarHTML(author, "avatar avatar-sm") +
@@ -832,12 +853,13 @@ async function loadStats() {
 
 window.addEventListener("pageshow", function (e) { if (e.persisted) refreshBadges(); });
 
-/* 自动刷新：统计栏每次都刷；列表只在「列表视图 + 没有弹窗/抽屉」时刷，避免打断发帖和看详情 */
+/* 自动刷新：统计栏每次都刷；列表走「静默刷新」—— 后台拉数据，内容没变就不动 DOM，
+   变了也只换内容不加遮罩，全程可点击、不闪烁 */
 document.addEventListener("bk:poll", function () {
   loadStats();
   const listView = document.getElementById("viewList");
   const inListView = listView && !listView.classList.contains("hidden");
-  if (inListView && !isUiBlocked()) loadPosts(state.page);
+  if (inListView && !isUiBlocked()) loadPosts(state.page, { silent: true });
 });
 
 forumInit();

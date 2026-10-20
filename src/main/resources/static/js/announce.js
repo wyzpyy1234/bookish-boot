@@ -96,12 +96,21 @@ function clearKeyword() {
   document.getElementById("aKeyword").focus();
 }
 
-async function loadList(page) {
+var _listBusy = false;   /* 静默刷新进行中标记：慢服务器上不堆积请求 */
+
+async function loadList(page, opts) {
+  const silent = !!(opts && opts.silent);
+  if (silent && _listBusy) return;
   state.page = page;
   const box = document.getElementById("annList");
   const seq = ++reqSeq;
-  if (box.querySelector(".ann-item")) box.classList.add("is-busy");
-  else box.innerHTML = skeletonRows(4);
+
+  /* 遮罩 / 骨架只给「用户主动操作」用；轮询的静默刷新绝不碰它们 */
+  if (!silent) {
+    if (box.querySelector(".ann-item")) box.classList.add("is-busy");
+    else box.innerHTML = skeletonRows(4);
+  }
+  _listBusy = true;
 
   try {
     const qs = "?page=" + page + "&size=" + state.size +
@@ -111,13 +120,26 @@ async function loadList(page) {
 
     const res = await request("GET", "/api/announcements" + qs);
     if (seq !== reqSeq) return;
-    box.classList.remove("is-busy");
-    renderList(res.list || []);
-    renderPager("pager", res, function (p) { loadList(p); });
+
+    if (!silent) {
+      box.classList.remove("is-busy");
+      box.innerHTML = annListHTML(res.list || [], true);
+      renderPager("pager", res, function (p) { loadList(p); });
+    } else {
+      /* 静默刷新：内容没变就一个字节都不动 —— 不闪、不跳、不断交互 */
+      const html = annListHTML(res.list || [], false);
+      if (html !== box.innerHTML) box.innerHTML = html;
+      renderPager("pager", res, function (p) { loadList(p); });
+    }
   } catch (e) {
     if (seq !== reqSeq) return;
-    box.classList.remove("is-busy");
-    box.innerHTML = failState(e);
+    if (!silent) {
+      box.classList.remove("is-busy");
+      box.innerHTML = failState(e);
+    }
+    /* 静默刷新失败就悄悄放弃：下一轮再试 */
+  } finally {
+    _listBusy = false;
   }
 }
 
@@ -127,17 +149,16 @@ function failState(e) {
     '<button class="btn btn-ghost btn-sm" onclick="location.reload()">重新加载</button>');
 }
 
-function renderList(list) {
-  const box = document.getElementById("annList");
+/* 列表 HTML 生成（纯函数）：正常渲染与静默刷新共用，保证比对口径一致 */
+function annListHTML(list, animate) {
   if (!list.length) {
-    box.innerHTML = emptyState("📭", state.onlyUnread ? "没有未读公告" : "暂无公告",
+    return emptyState("📭", state.onlyUnread ? "没有未读公告" : "暂无公告",
       state.onlyUnread ? "所有公告都已读完，很棒 👏" : "管理员还没有发布公告");
-    return;
   }
 
-  box.innerHTML = list.map(function (a) {
+  return list.map(function (a) {
     const meta = ANN_META[a.type] || ANN_META.notice;
-    return '<div class="ann-item fade-up' + (a.isRead ? "" : " unread") + '" onclick="openAnn(' + a.id + ')">' +
+    return '<div class="ann-item' + (animate ? " fade-up" : "") + (a.isRead ? "" : " unread") + '" onclick="openAnn(' + a.id + ')">' +
       '<div class="ann-ico ' + meta.cls + '">' + meta.icon + "</div>" +
       '<div class="ann-main">' +
         '<div class="ann-title">' +
@@ -314,10 +335,10 @@ window.addEventListener("pageshow", function (e) {
   if (e.persisted) { loadUnread(); loadList(state.page); }
 });
 
-/* 自动刷新：每 30 秒刷未读数 + 当前页列表；正在弹窗/看详情时不重渲染，避免打断操作 */
+/* 自动刷新：每轮刷未读数 + 当前页列表，但走「静默刷新」—— 内容没变就不动 DOM，绝不闪、不断交互 */
 document.addEventListener("bk:poll", function () {
   loadUnread();
-  if (!isUiBlocked()) loadList(state.page);
+  if (!isUiBlocked()) loadList(state.page, { silent: true });
 });
 
 annInit();
