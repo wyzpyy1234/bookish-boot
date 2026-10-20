@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<title>社区管理 · Bookish</title>
+<link rel="stylesheet" href="css/style.css?v=20261019l">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+
+    <main class="content">
+
+      <div class="seg mb-16" id="cmSeg">
+        <button class="seg-btn active" data-sub="reports" onclick="switchComm('reports')">🚩 举报处理 <span class="cnt" id="segReportCnt" style="display:none">0</span></button>
+        <button class="seg-btn" data-sub="audits" onclick="switchComm('audits')">📝 帖子审核 <span class="cnt" id="segAuditCnt" style="display:none">0</span></button>
+        <button class="seg-btn" data-sub="users" onclick="switchComm('users')">👥 用户与禁言</button>
+        <button class="seg-btn" data-sub="anns" onclick="switchComm('anns')">📢 公告管理</button>
+      </div>
+
+      <!-- ==================== 举报处理 ==================== -->
+      <div id="subReports">
+        <div class="card mb-16">
+          <div class="card-body" style="padding:14px 16px">
+            <div class="search-row">
+              <select id="rpStatus" onchange="loadReports(1)" style="width:auto;min-width:130px">
+                <option value="0">待处理</option>
+                <option value="">全部状态</option>
+                <option value="1">已处理</option>
+                <option value="2">已驳回</option>
+              </select>
+              <select id="rpTargetType" onchange="loadReports(1)" style="width:auto;min-width:130px">
+                <option value="">全部类型</option>
+                <option value="post">帖子</option>
+                <option value="comment">评论</option>
+              </select>
+              <button class="btn btn-ghost" onclick="loadReports(1)">刷新</button>
+              <span class="spacer" style="flex:1"></span>
+              <span class="text-sub text-sm">点「处理」可隐藏内容 / 删除 / 禁言作者</span>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="reportTable"></table></div>
+        <div id="reportPager" class="pager"></div>
+      </div>
+
+      <!-- ==================== 帖子审核 ==================== -->
+      <div id="subAudits" class="hidden">
+        <div class="card mb-16">
+          <div class="card-body" style="padding:14px 16px">
+            <div class="search-row">
+              <select id="auStatus" onchange="loadAudits(1)" style="width:auto;min-width:140px">
+                <option value="0">待审核</option>
+                <option value="1">已发布</option>
+                <option value="2">已驳回</option>
+              </select>
+              <div class="search-wrap">
+                <span class="s-ico">🔍</span>
+                <input type="text" id="auKeyword" placeholder="搜索标题或正文…"
+                       onkeydown="if(event.key==='Enter')loadAudits(1)">
+              </div>
+              <button class="btn btn-primary" onclick="loadAudits(1)">查询</button>
+              <button class="btn btn-ghost" onclick="resetAudits()">重置</button>
+            </div>
+            <div class="hint" style="margin-top:8px">
+              普通读者发帖默认「待审核」，只有这里点「通过」后其他人才能看到。
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="auditTable"></table></div>
+        <div id="auditPager" class="pager"></div>
+      </div>
+
+      <!-- ==================== 用户与禁言 ==================== -->
+      <div id="subUsers" class="hidden">
+        <div class="card mb-16">
+          <div class="card-body" style="padding:14px 16px">
+            <div class="search-row">
+              <div class="search-wrap">
+                <span class="s-ico">🔍</span>
+                <input type="text" id="uKeyword" placeholder="搜索账号或昵称…"
+                       onkeydown="if(event.key==='Enter')loadUsers(1)">
+              </div>
+              <select id="uRole" onchange="loadUsers(1)" style="width:auto;min-width:120px">
+                <option value="">全部角色</option>
+                <option value="reader">读者</option>
+                <option value="admin">管理员</option>
+              </select>
+              <select id="uStatus" onchange="loadUsers(1)" style="width:auto;min-width:120px">
+                <option value="">全部状态</option>
+                <option value="1">正常</option>
+                <option value="0">已禁言</option>
+              </select>
+              <button class="btn btn-primary" onclick="loadUsers(1)">查询</button>
+              <button class="btn btn-ghost" onclick="resetUsers()">重置</button>
+            </div>
+            <div class="hint" style="margin-top:8px">
+              禁言后该用户不能发帖 / 评论 / 举报；到期自动失效（后端在发帖、评论时按 mute_until 判断），
+              「解除禁言」是立刻恢复。
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="userTable"></table></div>
+        <div id="userPager" class="pager"></div>
+      </div>
+
+      <!-- ==================== 公告管理 ==================== -->
+      <div id="subAnns" class="hidden">
+        <div class="flex-between mb-16">
+          <div class="text-sub text-sm">共 <b id="annTotal">0</b> 条公告</div>
+          <button class="btn btn-primary" onclick="admOpenAnn(null)">＋ 发布公告</button>
+        </div>
+        <div class="table-wrap"><table class="data-table" id="annTable"></table></div>
+        <div id="annPager" class="pager"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ==================== 处理举报弹窗 ==================== -->
+<div class="modal-mask" id="dealModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>处理举报</h3>
+      <button class="modal-close" onclick="closeModal('dealModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="dealTarget" class="pf-tip" style="background:var(--surface-3);border-color:var(--border);color:var(--text-2)"></div>
+      <div class="field">
+        <label>处理动作</label>
+        <select id="dealAction" onchange="onDealActionChange()">
+          <option value="reject">驳回举报（内容不动）</option>
+          <option value="hide">隐藏被举报内容</option>
+          <option value="delete">删除被举报内容</option>
+          <option value="mute">隐藏内容 + 禁言作者</option>
+        </select>
+      </div>
+      <div class="field" id="dealDaysField" style="display:none">
+        <label>禁言天数</label>
+        <select id="dealDays">
+          <option value="1">1 天</option>
+          <option value="3" selected>3 天</option>
+          <option value="7">7 天</option>
+          <option value="30">30 天</option>
+          <option value="">永久禁言</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>处理备注（会记进 handle_remark）</label>
+        <input type="text" id="dealRemark" maxlength="200" placeholder="例如：确认是广告">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('dealModal')">取消</button>
+      <button class="btn btn-primary" id="dealSubmit" onclick="submitDeal()">确认处理</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 禁言弹窗 ==================== -->
+<div class="modal-mask" id="muteModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h3 id="muteModalTitle">禁言用户</h3>
+      <button class="modal-close" onclick="closeModal('muteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="muteTarget" class="pf-tip" style="background:var(--danger-50);border-color:var(--danger-100);color:var(--danger)"></div>
+      <div class="field">
+        <label>禁言时长</label>
+        <select id="muteDays">
+          <option value="1">1 天</option>
+          <option value="3" selected>3 天</option>
+          <option value="7">7 天</option>
+          <option value="30">30 天</option>
+          <option value="">永久禁言</option>
+        </select>
+        <div class="hint">禁言期间该用户不能发帖、评论、举报（后端会拦）</div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>禁言原因</label>
+        <input type="text" id="muteReason" maxlength="200" placeholder="例如：发布广告内容">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('muteModal')">取消</button>
+      <button class="btn btn-danger" id="muteSubmit" onclick="submitMute()">确认禁言</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 驳回帖子弹窗 ==================== -->
+<div class="modal-mask" id="rejectModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h3>驳回帖子</h3>
+      <button class="modal-close" onclick="closeModal('rejectModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="rejectTarget" class="pf-tip" style="background:var(--danger-50);border-color:var(--danger-100);color:var(--danger)"></div>
+      <div class="field" style="margin-bottom:0">
+        <label>驳回理由（作者能看到）</label>
+        <textarea id="rejectReason" maxlength="200" placeholder="例如：正文只有一句话，请补充具体内容后再发"></textarea>
+        <div class="hint">不填则默认「内容不符合社区规范」。作者可修改后重新提交审核。</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('rejectModal')">取消</button>
+      <button class="btn btn-danger" id="rejectSubmit" onclick="submitReject()">确认驳回</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 公告发布/编辑弹窗 ==================== -->
+<div class="modal-mask" id="annModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 id="annModalTitle">发布公告</h3>
+      <button class="modal-close" onclick="closeModal('annModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>标题 *</label>
+        <input type="text" id="anTitle" maxlength="120" placeholder="例如：国庆假期开放时间调整">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>类型</label>
+          <select id="anType">
+            <option value="notice">📌 通知</option>
+            <option value="rule">📜 规则</option>
+            <option value="event">🎉 活动</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>状态</label>
+          <select id="anStatus">
+            <option value="1">已发布（读者可见）</option>
+            <option value="0">下架（读者不可见）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="checkbox" style="font-weight:600;color:var(--text-2)">
+          <input type="checkbox" id="anTop"> 置顶显示
+        </label>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>正文 *</label>
+        <textarea id="anContent" style="min-height:200px" placeholder="支持换行，请写清时间、地点、规则"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('annModal')">取消</button>
+      <button class="btn btn-primary" id="anSubmit" onclick="admSubmitAnn()">发布</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/mock.js?v=20261019l"></script>
+<script src="js/api.js?v=20261019l"></script>
+<script src="js/community.js?v=20261019l"></script>
+</body>
+</html>

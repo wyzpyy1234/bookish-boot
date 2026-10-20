@@ -567,7 +567,7 @@ const NAV_ITEMS = {
   ],
   admin: [
     { key: "admin",         href: "admin.html",         icon: "📊", text: "管理后台" },
-    { key: "community",     href: "admin.html#community", icon: "🛡️", text: "社区管理", badge: "community" },
+    { key: "community",     href: "community.html",     icon: "🛡️", text: "社区管理", badge: "community" },
     { key: "forum",         href: "forum.html",         icon: "💬", text: "交流论坛" },
     { key: "announcements", href: "announcements.html", icon: "📢", text: "通知公告", badge: "ann" }
   ]
