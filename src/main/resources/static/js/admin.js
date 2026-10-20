@@ -10,7 +10,8 @@ window.PAGE_ROLE = "admin";
 var me = requireLogin("admin");
 
 mountShell({
-  active: "admin",
+  /* 从侧边栏「社区管理」进来（#community）时高亮它，否则高亮管理后台 */
+  active: location.hash === "#community" ? "community" : "admin",
   title: "管理后台",
   desc: "图书 / 借阅 / 统计 / 社区，一屏统管"
 });
@@ -22,6 +23,8 @@ var publishers = [];
 
 var commSub = "reports";   /* 社区管理当前子页 */
 var dealId = null;         /* 正在处理的举报 id */
+var auditPage = 1;         /* 审核列表当前页（轮询时保持不跳页） */
+var reportPage = 1;        /* 举报列表当前页 */
 var muteUserId = null;     /* 正在禁言的用户 id */
 var admAnnId = null;       /* 公告弹窗编辑的 id */
 var rejectId = null;       /* 正在驳回的帖子 id */
@@ -32,7 +35,21 @@ function safeInit() {
   loadMeta();
   loadBooks(1);
   loadCommunityBadge();
+  /* 从侧边栏「社区管理」进来时直接落在社区管理页 */
+  if (location.hash === "#community") switchPane("community", document.getElementById("tabCommunity"));
 }
+
+/* 静默换表格内容：内容没变就不动 DOM，轮询时表格不会闪一下 */
+function tableSwap(table, html) {
+  if (!table) return;
+  if (table.getAttribute("data-html") === html) return;
+  table.setAttribute("data-html", html);
+  table.innerHTML = html;
+}
+
+document.addEventListener("hashchange", function () {
+  if (location.hash === "#community") switchPane("community", document.getElementById("tabCommunity"));
+});
 
 /* ==================== 顶部标签页 ==================== */
 
@@ -316,9 +333,11 @@ const POST_STATUS_TAG = {
   2: '<span class="badge">已驳回</span>'
 };
 
-async function loadAudits(page) {
+async function loadAudits(page, opts) {
+  const silent = !!(opts && opts.silent);
+  auditPage = page;
   const table = document.getElementById("auditTable");
-  table.innerHTML = '<tr><td class="table-empty">加载中…</td></tr>';
+  if (!silent) table.innerHTML = '<tr><td class="table-empty">加载中…</td></tr>';
 
   try {
     let qs = "?page=" + page + "&size=10";
@@ -330,7 +349,7 @@ async function loadAudits(page) {
     const res = await request("GET", "/api/forum/posts" + qs);
     const list = res.list || [];
 
-    table.innerHTML =
+    const html =
       '<tr><th>#</th><th>标题 / 摘要</th><th>作者</th><th class="t-center">标签</th>' +
       '<th class="t-center">发布时间</th><th class="t-center">状态</th><th class="t-center">操作</th></tr>' +
       (list.length ? list.map(function (p) {
@@ -353,9 +372,10 @@ async function loadAudits(page) {
         "</tr>";
       }).join("") : '<tr><td colspan="7" class="table-empty">这一栏没有帖子 🎉</td></tr>');
 
+    tableSwap(table, html);
     renderPager("auditPager", res, function (p) { loadAudits(p); });
   } catch (e) {
-    table.innerHTML = '<tr><td class="table-empty">' + escapeHtml(e.message) + "</td></tr>";
+    if (!silent) table.innerHTML = '<tr><td class="table-empty">' + escapeHtml(e.message) + "</td></tr>";
   }
 }
 
@@ -373,6 +393,7 @@ async function approveAudit(id) {
     showToast("已通过", "ok");
     loadAudits(1);
     loadCommunityBadge();
+    refreshBadges();
   } catch (e) { showToast(e.message, "err"); }
 }
 
@@ -396,6 +417,7 @@ async function submitReject() {
     closeModal("rejectModal");
     loadAudits(1);
     loadCommunityBadge();
+    refreshBadges();
   } catch (e) {
     showToast(e.message, "err");
   } finally {
@@ -408,9 +430,11 @@ async function submitReject() {
 
 const REASON_MAP = { spam: "广告/灌水", abuse: "辱骂", illegal: "违法违规", other: "其他" };
 
-async function loadReports(page) {
+async function loadReports(page, opts) {
+  const silent = !!(opts && opts.silent);
+  reportPage = page;
   const table = document.getElementById("reportTable");
-  table.innerHTML = '<tr><td class="table-empty">加载中…</td></tr>';
+  if (!silent) table.innerHTML = '<tr><td class="table-empty">加载中…</td></tr>';
 
   try {
     let qs = "?page=" + page + "&size=10";
@@ -422,7 +446,7 @@ async function loadReports(page) {
     const res = await request("GET", "/api/admin/forum/reports" + qs);
     const list = res.list || [];
 
-    table.innerHTML =
+    const html =
       '<tr><th>#</th><th>类型</th><th>被举报内容</th><th>作者</th>' +
       '<th>举报人 / 原因</th><th>举报时间</th><th class="t-center">状态</th><th class="t-center">操作</th></tr>' +
       (list.length ? list.map(function (r) {
@@ -455,9 +479,10 @@ async function loadReports(page) {
         "</tr>";
       }).join("") : '<tr><td colspan="8" class="table-empty">没有符合条件的举报 🎉</td></tr>');
 
+    tableSwap(table, html);
     renderPager("reportPager", res, function (p) { loadReports(p); });
   } catch (e) {
-    table.innerHTML = '<tr><td class="table-empty">' + escapeHtml(e.message) + "</td></tr>";
+    if (!silent) table.innerHTML = '<tr><td class="table-empty">' + escapeHtml(e.message) + "</td></tr>";
   }
 }
 
@@ -722,8 +747,22 @@ async function admDelAnn(id, title) {
   } catch (e) { showToast(e.message, "err"); }
 }
 
+/* 自动刷新：后台页每轮静默刷新「当前正在看」的区域 —— 新帖、新举报不用 F5 */
+document.addEventListener("bk:poll", function () {
+  loadCommunityBadge();
+  if (document.visibilityState === "hidden") return;
+  const paneStats = document.getElementById("paneStats");
+  if (paneStats && !paneStats.classList.contains("hidden")) loadStats();
+
+  const paneComm = document.getElementById("paneCommunity");
+  if (paneComm && !paneComm.classList.contains("hidden") && !isUiBlocked()) {
+    if (commSub === "audits") loadAudits(auditPage, { silent: true });
+    if (commSub === "reports") loadReports(reportPage, { silent: true });
+  }
+});
+
 window.addEventListener("pageshow", function (e) {
-  if (e.persisted) { refreshBadges(); loadCommunityBadge(); }
+  if (e.persisted) { refreshBadges(); loadCommunityBadge(); loadAudits(auditPage, { silent: true }); }
 });
 
 safeInit();

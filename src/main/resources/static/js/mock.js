@@ -48,7 +48,7 @@ const MOCK_BOOKS = [
 ];
 
 const MOCK_BORROWS = [
-  { id: 101, readerId: 2, readerName: "张三", copyId: 1,  barcode: "BC000101", bookId: 1,  bookTitle: "Java核心技术 卷I",  bookAuthor: "Cay S. Horstmann", categoryName: "计算机",   borrowDate: "2026-09-20 10:20:00", dueDate: "2026-10-20 10:20:00", returnDate: null,                  status: "borrowed", renewCount: 0 },
+  { id: 101, readerId: 2, readerName: "张三", copyId: 1,  barcode: "BC000101", bookId: 1,  bookTitle: "Java核心技术 卷I",  bookAuthor: "Cay S. Horstmann", categoryName: "计算机",   borrowDate: "2026-09-20 10:20:00", dueDate: "2026-11-20 10:20:00", returnDate: null,                  status: "borrowed", renewCount: 0 },
   { id: 102, readerId: 2, readerName: "张三", copyId: 9,  barcode: "BC000301", bookId: 3,  bookTitle: "深入理解Java虚拟机", bookAuthor: "周志明",          categoryName: "计算机",   borrowDate: "2026-08-01 09:00:00", dueDate: "2026-08-31 09:00:00", returnDate: null,                  status: "borrowed", renewCount: 1 },
   { id: 103, readerId: 2, readerName: "张三", copyId: 25, barcode: "BC000701", bookId: 7,  bookTitle: "红楼梦",            bookAuthor: "曹雪芹",           categoryName: "文学小说", borrowDate: "2026-09-25 14:30:00", dueDate: "2026-10-25 14:30:00", returnDate: null,                  status: "borrowed", renewCount: 0 },
   { id: 104, readerId: 2, readerName: "张三", copyId: 33, barcode: "BC000901", bookId: 9,  bookTitle: "百年孤独",          bookAuthor: "加西亚·马尔克斯",  categoryName: "文学小说", borrowDate: "2026-06-10 11:00:00", dueDate: "2026-07-10 11:00:00", returnDate: "2026-07-05 16:20:00", status: "returned", renewCount: 0 },

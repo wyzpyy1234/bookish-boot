@@ -37,11 +37,18 @@ function pickStatus(el, st) {
   loadBorrows(1);
 }
 
-async function loadBorrows(page) {
+var _listBusy = false;
+
+async function loadBorrows(page, opts) {
+  const silent = !!(opts && opts.silent);
+  if (silent && _listBusy) return;
   state.page = page;
   var box = document.getElementById("borrowList");
-  if (!box.querySelector(".borrow-card")) box.innerHTML = skeletonRows(4);
-  else box.classList.add("is-busy");
+  if (!silent) {
+    if (!box.querySelector(".borrow-card")) box.innerHTML = skeletonRows(4);
+    else box.classList.add("is-busy");
+  }
+  _listBusy = true;
 
   try {
     var qs = "?page=" + page + "&size=" + state.size;
@@ -49,11 +56,14 @@ async function loadBorrows(page) {
 
     var res = await request("GET", "/api/borrows" + qs);
     box.classList.remove("is-busy");
-    renderBorrows(res.list || []);
+    var html = borrowsHTML(res.list || [], !silent);
+    if (!silent || html !== box.innerHTML) box.innerHTML = html;
     renderPager("pager", res, function (p) { loadBorrows(p); });
   } catch (e) {
     box.classList.remove("is-busy");
-    box.innerHTML = emptyState("⚠️", "加载失败", escapeHtml(e.message));
+    if (!silent) box.innerHTML = emptyState("⚠️", "加载失败", escapeHtml(e.message));
+  } finally {
+    _listBusy = false;
   }
 }
 
@@ -63,21 +73,19 @@ function statusTag(r) {
   return '<span class="status-tag borrowed">在借中</span>';
 }
 
-function renderBorrows(list) {
-  var box = document.getElementById("borrowList");
+function borrowsHTML(list, animate) {
   if (!list.length) {
-    box.innerHTML = emptyState("📖", "暂无借阅记录",
+    return emptyState("📖", "暂无借阅记录",
       "去图书检索挑一本，开始你的阅读计划",
       '<a class="btn btn-primary btn-sm" href="index.html">去借书</a>');
-    return;
   }
 
-  box.innerHTML = list.map(function (r) {
+  return list.map(function (r) {
     var cls = r.overdue ? "overdue" : (r.status === "returned" ? "returned" : "");
     var canReturn = r.status === "borrowed";
     var canRenew = r.status === "borrowed" && !r.overdue && r.renewCount < 2;
 
-    return '<div class="borrow-card fade-up ' + cls + '">' +
+    return '<div class="borrow-card' + (animate ? " fade-up" : "") + ' ' + cls + '">' +
       '<div class="borrow-head">' +
         '<span class="b-title">' + escapeHtml(r.bookTitle) + "</span>" +
         statusTag(r) +
@@ -136,6 +144,13 @@ async function doRenew(id, btn) {
     btn.disabled = false;
   }
 }
+
+/* 自动刷新：归还 / 续借 / 别人替你归还后，概览和列表自动更新，不用 F5 */
+document.addEventListener("bk:poll", function () {
+  if (isUiBlocked()) return;
+  loadSummary();
+  loadBorrows(state.page, { silent: true });
+});
 
 window.addEventListener("pageshow", function (e) { if (e.persisted) refreshBadges(); });
 

@@ -567,7 +567,8 @@ const NAV_ITEMS = {
   ],
   admin: [
     { key: "admin",         href: "admin.html",         icon: "📊", text: "管理后台" },
-    { key: "forum",         href: "forum.html",         icon: "💬", text: "交流论坛", badge: "report" },
+    { key: "community",     href: "admin.html#community", icon: "🛡️", text: "社区管理", badge: "community" },
+    { key: "forum",         href: "forum.html",         icon: "💬", text: "交流论坛" },
     { key: "announcements", href: "announcements.html", icon: "📢", text: "通知公告", badge: "ann" }
   ]
 };
@@ -709,8 +710,13 @@ function refreshBadges() {
     .catch(function () { /* 后端还没实现时不打扰用户 */ });
 
   if ((getUser() || {}).role === "admin") {
+    /* 「社区管理」红点 = 待审核帖 + 待处理举报：处理完立刻归零，
+       不再挂在「交流论坛」上（看论坛并不能清掉它，之前就是这个误会） */
     request("GET", "/api/forum/stats", null, { silent: true })
-      .then(function (s) { setBadge("badgereport", (s && s.pendingReports) || 0); })
+      .then(function (s) {
+        const n = ((s && s.pendingPosts) || 0) + ((s && s.pendingReports) || 0);
+        setBadge("badgecommunity", n);
+      })
       .catch(function () {});
   }
 }

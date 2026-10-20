@@ -525,21 +525,23 @@ function cancelReply() {
   renderReplyHint();
 }
 
-async function loadComments(page) {
+async function loadComments(page, opts) {
+  const silent = !!(opts && opts.silent);
   const box = document.getElementById("commentList");
   if (!box) return;
   current.commentPage = page || 1;
-  if (!box.querySelector(".comment-item")) box.innerHTML = '<div class="loading-tip">评论加载中…</div>';
+  if (!silent && !box.querySelector(".comment-item")) box.innerHTML = '<div class="loading-tip">评论加载中…</div>';
 
   try {
     const res = await request("GET", "/api/forum/posts/" + current.post.id +
       "/comments?page=" + current.commentPage + "&size=15");
     current.comments = res.list || [];
-    renderComments();
+    const html = commentsHTML();
+    if (!silent || html !== box.innerHTML) box.innerHTML = html;
     renderPager("commentPager", res, function (p) { loadComments(p); });
     renderComposer();
   } catch (e) {
-    box.innerHTML = '<div style="padding:16px 24px">' + failState(e, "评论") + "</div>";
+    if (!silent) box.innerHTML = '<div style="padding:16px 24px">' + failState(e, "评论") + "</div>";
   }
 }
 
@@ -569,18 +571,21 @@ function commentHTML(c, isReply) {
   "</div>";
 }
 
-function renderComments() {
-  const box = document.getElementById("commentList");
-  if (!box) return;
+function commentsHTML() {
   if (!current.comments.length) {
-    box.innerHTML = emptyState("💭", "还没有评论", "来抢个沙发吧");
-    return;
+    return emptyState("💭", "还没有评论", "来抢个沙发吧");
   }
-  box.innerHTML = current.comments.map(function (c) {
+  return current.comments.map(function (c) {
     const kids = (c.children || []).map(function (r) { return commentHTML(r, true); }).join("");
     return commentHTML(c, false) +
       (kids ? '<div class="comment-replies">' + kids + "</div>" : "");
   }).join("");
+}
+
+function renderComments() {
+  const box = document.getElementById("commentList");
+  if (!box) return;
+  box.innerHTML = commentsHTML();
 }
 
 async function submitComment() {
@@ -861,9 +866,15 @@ window.addEventListener("pageshow", function (e) { if (e.persisted) refreshBadge
    变了也只换内容不加遮罩，全程可点击、不闪烁 */
 document.addEventListener("bk:poll", function () {
   loadStats();
+  if (isUiBlocked()) return;
   const listView = document.getElementById("viewList");
   const inListView = listView && !listView.classList.contains("hidden");
-  if (inListView && !isUiBlocked()) loadPosts(state.page, { silent: true });
+  if (inListView) { loadPosts(state.page, { silent: true }); return; }
+
+  /* 停在帖子详情页时：只静默刷新评论区，不重载帖子本身（重载会重复加浏览量） */
+  const detailView = document.getElementById("viewDetail");
+  const inDetail = detailView && !detailView.classList.contains("hidden");
+  if (inDetail && current.post) loadComments(current.commentPage, { silent: true });
 });
 
 forumInit();

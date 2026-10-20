@@ -592,6 +592,12 @@ async function doBorrow() {
     }
 }
 
+/* 自动刷新：首页只静默刷新「我的借阅」概览（纯文本更新，无闪烁） */
+document.addEventListener("bk:poll", function () {
+    if (isUiBlocked()) return;
+    loadSummary();
+});
+
 /* 从借阅页返回（bfcache 恢复）时重新量一次，避免残留旧宽度 */
 window.addEventListener("pageshow", function (e) {
     if (e.persisted) { applyHotMode(); hotCtl.idx = 0; hotApply(0); hotAuto(); refreshBadges(); }
