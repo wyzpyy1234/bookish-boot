@@ -118,6 +118,24 @@
         SELECT url FROM forum_post_image WHERE post_id = #{postId} ORDER BY sort_no
     </select>
 
+    <select id="listPostImagesBatch" resultType="java.util.Map">
+        SELECT post_id AS postId, url
+        FROM forum_post_image
+        WHERE post_id IN
+        <foreach collection="postIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+        ORDER BY post_id, sort_no
+    </select>
+
+    <select id="listReportedPostIds" resultType="java.lang.Integer">
+        SELECT target_id FROM forum_report
+        WHERE target_type = 'post' AND reporter_id = #{userId} AND target_id IN
+        <foreach collection="postIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+    </select>
+
     <select id="hasReported" resultType="int">
         SELECT COUNT(*) FROM forum_report
         WHERE target_type = 'post' AND target_id = #{postId} AND reporter_id = #{userId}

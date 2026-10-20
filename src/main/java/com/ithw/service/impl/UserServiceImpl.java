@@ -122,8 +122,37 @@ public class UserServiceImpl implements UserService {
             dto.setSort("newest");
         }
         List<PostVo> postVo = userDao.forumList(dto, id, isAdmin, offset, size);
+
+        /* 批量取图片和举报状态：原来每行 2 次 SQL（11 篇帖 = 22 次往返），
+           TiDB Serverless 每次往返 200~300ms，列表接口被拖到 7 秒。
+           合并成 2 次批量查询后整个接口只剩 4 次 SQL。 */
+        Map<Integer, List<String>> imgMap = new HashMap<Integer, List<String>>();
+        java.util.Set<Integer> reportedSet = new java.util.HashSet<Integer>();
+        if (!postVo.isEmpty()) {
+            List<Integer> postIds = new ArrayList<Integer>();
+            for (PostVo vo : postVo) {
+                postIds.add(vo.getId());
+            }
+            List<Map<String, Object>> imgRows = userDao.listPostImagesBatch(postIds);
+            for (Map<String, Object> row : imgRows) {
+                Integer pid = ((Number) row.get("postId")).intValue();
+                String url = (String) row.get("url");
+                List<String> urls = imgMap.get(pid);
+                if (urls == null) {
+                    urls = new ArrayList<String>();
+                    imgMap.put(pid, urls);
+                }
+                urls.add(url);
+            }
+            List<Integer> reportedIds = userDao.listReportedPostIds(postIds, loginUser.getId());
+            for (Integer pid : reportedIds) {
+                reportedSet.add(pid);
+            }
+        }
+
         for (PostVo vo : postVo) {
-            vo.setImages(userDao.listPostImages(vo.getId()));
+            List<String> imgs = imgMap.get(vo.getId());
+            vo.setImages(imgs != null ? imgs : new ArrayList<String>());
 
             boolean author = vo.getUserId() != null && vo.getUserId().equals(id);
 
@@ -131,7 +160,7 @@ public class UserServiceImpl implements UserService {
             vo.setCanDelete(author || isAdmin ? 1 : 0);
             vo.setIsAdmin(isAdmin ? 1 : 0);
 
-            boolean reported = userDao.hasReported(vo.getId(), loginUser.getId()) > 0;
+            boolean reported = reportedSet.contains(vo.getId());
             vo.setCanReport((vo.getStatus() != null && vo.getStatus() == 1)
                     && !author && !isAdmin && !reported ? 1 : 0);
 

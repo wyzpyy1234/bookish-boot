@@ -88,7 +88,11 @@ function route() {
 function showList() {
   document.getElementById("viewList").classList.remove("hidden");
   document.getElementById("viewDetail").classList.add("hidden");
-  loadPosts(state.page);
+  /* 从详情返回：列表 DOM 还在（只是被隐藏了），先原样显示，再后台静默刷新
+     —— 不加遮罩、不重渲染，消除「返回卡 4 秒灰屏」 */
+  const box = document.getElementById("postList");
+  if (box.querySelector(".post-item")) loadPosts(state.page, { silent: true });
+  else loadPosts(state.page);
 }
 
 function backToList() {

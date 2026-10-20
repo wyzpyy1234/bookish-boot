@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface UserDao {
@@ -51,6 +52,13 @@ public interface UserDao {
                               @Param("isAdmin") boolean isAdmin);
 
     List<String> listPostImages(@Param("postId") Integer postId);
+
+    // 批量取一页帖子的配图（避免每行一次 SQL 的 N+1）
+    List<Map<String, Object>> listPostImagesBatch(@Param("postIds") List<Integer> postIds);
+
+    // 批量查「这个用户举报过哪些帖」
+    List<Integer> listReportedPostIds(@Param("postIds") List<Integer> postIds,
+                                      @Param("userId") Integer userId);
 
     // 我有没有举报过这条帖
     Integer hasReported(@Param("postId") Integer postId, @Param("userId") Integer userId);
